@@ -1,0 +1,263 @@
+---
+title: Quest tracking
+description: Advanced filtering, dependency visualization, and progress management for all Tarkov quests
+---
+
+The Quest Tracking system provides comprehensive tools for managing all Escape from Tarkov quests, with powerful filtering, two distinct visualization modes, and detailed task information.
+
+## Filtering tasks
+
+The filter bar at the top of the Tasks page lets you narrow down quests using multiple criteria:
+
+### Search
+
+Type in the search box to filter tasks by name. The search matches task names in real-time as you type.
+
+### Trader filter
+
+Select one or more traders to show only their quests:
+- Prapor
+- Therapist
+- Skier
+- Peacekeeper
+- Mechanic
+- Ragman
+- Jaeger
+- Fence
+- Lightkeeper
+
+### Map filter
+
+Filter tasks by location to plan raids efficiently:
+- Customs
+- Woods
+- Shoreline
+- Reserve
+- Interchange
+- Factory
+- The Lab
+- Streets of Tarkov
+- Ground Zero
+- And more
+
+### Task type filter
+
+Narrow by objective type:
+- **Shoot** - Eliminate PMCs or Scavs
+- **Give item** - Hand in items to traders
+- **Visit** - Reach specific locations
+- **Find item** - Locate items in-raid
+- **Plant item** - Place items at markers
+- **Mark** - Mark vehicles, areas, or items
+- **Extract** - Survive and extract from maps
+- **Skill** - Reach skill level requirements
+- **Trader level** - Achieve trader loyalty requirements
+- **Experience** - Reach character level milestones
+
+### Status filter
+
+Filter by completion state:
+- **Not started** - Available but not begun
+- **In progress** - Currently working on objectives
+- **Done** - Completed tasks
+
+### Kappa toggle
+
+Click the "Kappa" button to show only quests required for the Kappa container.
+
+<Tip>
+Combine multiple filters for precise queries. For example, filter by Customs + Shoot + Not started to find all combat quests you haven't started on Customs.
+</Tip>
+
+### Resetting filters
+
+When any filters are active, a "Reset" button appears in the filter bar. Click it to clear all selections and return to the full task list.
+
+## View modes
+
+The Tasks page offers two ways to visualize your quests:
+
+### Flow view
+
+Flow view displays tasks as an interactive dependency graph showing the prerequisite relationships between quests.
+
+**Features:**
+- Visual nodes representing each task
+- Arrows showing which tasks unlock others
+- Color-coding by completion status
+- Pan and zoom controls for navigation
+- Fullscreen mode for better visibility
+- Hover over nodes to highlight dependencies
+
+**Use Flow view when:**
+- Planning your progression path
+- Understanding quest chains
+- Identifying bottleneck quests
+- Visualizing the overall quest structure
+
+<Note>
+Flow view automatically filters the graph to show only tasks matching your current filter criteria, making it easy to see progression chains for specific traders or maps.
+</Note>
+
+### List view
+
+List view presents tasks in a traditional table format with sortable columns.
+
+**Features:**
+- Compact row display showing key info
+- Trader name and icon
+- Task status badges
+- Map location
+- Kappa requirement indicator
+- Click any row to open the detail panel
+
+**Use List view when:**
+- Scanning many tasks quickly
+- Searching for specific quest names
+- Reviewing completion status at a glance
+- Working through filtered results
+
+## Task detail panel
+
+Click any task in either view to open the detail panel, which displays:
+
+### Basic information
+- Task name
+- Trader who assigns it
+- Required character level
+- Kappa requirement status
+- Completion status
+
+### Objectives list
+
+All objectives required to complete the quest:
+- Objective description
+- Map locations (if applicable)
+- Required counts (e.g., "Eliminate 5 PMCs")
+- Completion checkboxes
+
+### Prerequisite tree
+
+A tree view showing:
+- **Direct prerequisites** - Tasks that must be completed first
+- **Indirect prerequisites** - Tasks in the chain before those
+- Completion status for each prerequisite
+- Expandable/collapsible tree structure
+
+<Tip>
+The prerequisite tree helps you understand why a task is locked and plan the sequence of quests needed to unlock it.
+</Tip>
+
+### Rewards
+
+- Experience points gained
+- Currency rewards (Roubles, Dollars, Euros)
+- Item rewards with quantities
+- Trader reputation changes
+
+### Notes feature
+
+Each task has a notes field where you can:
+- Add personal reminders
+- Record strategies or tips
+- Track specific progress details
+- Save useful information for future wipes
+
+Notes are saved per-task and persist across sessions.
+
+## Marking tasks complete
+
+There are several ways to mark tasks as complete:
+
+### From the detail panel
+
+Click the status dropdown and select "Done".
+
+### From the Now panel
+
+Click the "Done" button on pinned tasks in the dashboard.
+
+### Prerequisite checking
+
+When you mark a task complete, the app automatically:
+
+1. Checks if all prerequisite tasks are completed
+2. If prerequisites are incomplete, shows a confirmation modal
+3. Lists all incomplete prerequisites with their current status
+4. Offers to batch-complete them
+
+<Note>
+This safety check prevents accidentally marking tasks complete out of sequence, which could cause confusion in dependency tracking.
+</Note>
+
+## Batch completion
+
+When the prerequisite confirmation modal appears, you have two options:
+
+**Batch complete all**
+- Marks all listed prerequisites as "Done"
+- Then marks your target task as "Done"
+- Updates all progress tracking immediately
+- Refreshes dependency graphs and recommendations
+
+**Cancel**
+- Closes the modal without changes
+- Allows you to manually complete prerequisites in order
+- Maintains accurate progression state
+
+<Tip>
+Batch completion is useful when you've completed several tasks in-game but haven't updated the tracker yet. It saves time updating multiple tasks at once.
+</Tip>
+
+## User workflows
+
+### Finding available tasks
+
+<Steps>
+  <Step title="Apply relevant filters">
+    Select your current level, trader, or map.
+  </Step>
+  <Step title="Toggle Kappa filter if needed">
+    Focus on Kappa-required tasks.
+  </Step>
+  <Step title="Switch to Flow view">
+    See which tasks are currently unlocked (no incomplete prerequisites).
+  </Step>
+  <Step title="Select tasks to pursue">
+    Click tasks to view details and pin to your Now panel.
+  </Step>
+</Steps>
+
+### Understanding quest chains
+
+<Steps>
+  <Step title="Filter by trader">
+    Select the trader whose quest chain you want to explore.
+  </Step>
+  <Step title="Open Flow view">
+    Visualize the entire quest line structure.
+  </Step>
+  <Step title="Identify key quests">
+    Look for tasks with many downstream dependencies.
+  </Step>
+  <Step title="Check the prerequisite tree">
+    Click individual tasks to see detailed requirements.
+  </Step>
+</Steps>
+
+### Planning map runs
+
+<Steps>
+  <Step title="Filter by map">
+    Select the map you're planning to raid.
+  </Step>
+  <Step title="Filter by status">
+    Choose "Not started" or "In progress".
+  </Step>
+  <Step title="Review available tasks">
+    Use List view to see all matching quests.
+  </Step>
+  <Step title="Pin relevant tasks">
+    Add them to your Now panel for in-raid reference.
+  </Step>
+</Steps>

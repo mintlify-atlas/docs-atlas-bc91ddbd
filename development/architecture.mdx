@@ -1,0 +1,226 @@
+---
+title: Architecture Overview
+description: High-level architecture design of Tarkov Kappa Navi, including layer breakdown, local-first principles, and data separation strategy
+---
+
+Tarkov Kappa Navi is built as a **local-first, client-side SaaS application** with no backend server. All user data lives in IndexedDB, while quest/item data is fetched from the tarkov.dev GraphQL API and cached in memory.
+
+## Architecture Diagram
+
+```
+tarkov.dev GraphQL API
+        │
+        ▼
+  TanStack Query (メモリキャッシュ, TTL 12h)
+        │
+        ▼
+  ┌─────────────────────────────────┐
+  │         React Components        │
+  │  (Dashboard / Tasks / Map / …)  │
+  └──────┬──────────────┬───────────┘
+         │              │
+    Zustand Store   Domain Logic
+    (UI状態管理)    (unlock判定, フィルタ,
+         │          Kappa進捗, おすすめ)
+         │              │
+         ▼              ▼
+       Dexie v4 (IndexedDB)
+       ┌──────────────────┐
+       │ profile          │
+       │ progress         │
+       │ nowPins          │
+       │ notes / logs     │
+       │ hideoutProgress  │
+       │ mapPins          │
+       └──────────────────┘
+```
+
+## Layer Breakdown
+
+### 1. tarkov.dev GraphQL API (External Data Source)
+
+The application fetches all quest, map, trader, hideout, and item data from the community-maintained [tarkov.dev GraphQL API](https://tarkov.dev/).
+
+- **Purpose**: Provides read-only game data (quests, maps, items, hideout stations)
+- **Location**: `src/api/graphql.ts:1`
+- **Implementation**: Single `gqlFetch()` function wraps `fetch()` with GraphQL error handling
+
+```typescript
+const ENDPOINT = 'https://api.tarkov.dev/graphql';
+
+export async function gqlFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const res = await fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, ...(variables && { variables }) }),
+  });
+  // ... error handling
+}
+```
+
+### 2. TanStack Query (Memory Cache Layer)
+
+API responses are cached in **memory only** using TanStack Query v5, with a 12-hour stale time and infinite garbage collection time.
+
+- **Purpose**: Minimize API requests, enable offline-first experience
+- **Location**: `src/api/hooks.ts:24`
+- **TTL**: 12 hours (`staleTime: TWELVE_HOURS`)
+- **Fallback**: If online fetch fails, Query falls back to last successful cache
+
+```typescript
+const queryDefaults = {
+  staleTime: TWELVE_HOURS,     // 12 * 60 * 60 * 1000
+  gcTime: Infinity,            // Never garbage collect
+  retry: 2,
+  refetchOnWindowFocus: false,
+} as const;
+```
+
+<Note>
+  API data is **never** persisted to IndexedDB. Only user-generated data (progress, pins, notes) is stored locally. This keeps the cache fresh on app updates and avoids schema migration complexity.
+</Note>
+
+### 3. React Components (UI Layer)
+
+All UI is built with React 18 functional components, organized by feature:
+
+- `components/dashboard/` - Kappa progress, Now panel, recommendations
+- `components/tasks/` - Quest list/flow view, filtering
+- `components/map/` - Interactive map with user pins
+- `components/hideout/` - Hideout station construction tracker
+- `components/items/` - Item price tiers
+- `components/settings/` - Player level, data export/import, wipe reset
+
+Components consume data via:
+- **API hooks** (`useTasks()`, `useMaps()`, etc.) for game data
+- **Zustand stores** for UI state (filters, active tab, etc.)
+- **Domain functions** for computed values (unlock state, recommendations)
+
+### 4. Zustand Stores (UI State Management)
+
+Zustand v5 manages **ephemeral UI state** only (not persisted):
+
+- Active filters (trader, map, status)
+- Sidebar collapse state
+- Active view mode (list vs flow)
+- Tier thresholds for item pricing
+
+<Note>
+  Zustand is used **only** for UI state. User data (task completion, notes, pins) is managed directly via Dexie CRUD operations, not through Zustand.
+</Note>
+
+### 5. Domain Logic (Business Rules)
+
+Pure TypeScript functions in `src/domain/` encapsulate all game logic:
+
+#### Unlock Determination (`domain/unlock.ts:11`)
+
+A task unlocks when:
+1. `playerLevel >= task.minPlayerLevel`
+2. All prerequisite tasks are marked `"done"`
+
+```typescript
+export function isTaskUnlocked(
+  task: QuestModel,
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): boolean {
+  if (playerLevel < task.minPlayerLevel) return false;
+  for (const prereqId of task.prereqIds) {
+    const status = progressMap.get(prereqId) ?? 'not_started';
+    if (status !== 'done') return false;
+  }
+  return true;
+}
+```
+
+**Lock state is always computed dynamically** — it is never cached or stored.
+
+#### Recommendation Scoring (`domain/recommendations.ts:96`)
+
+Recommended tasks are scored using a weighted composite formula:
+
+- **Downstream impact** (50%): # of Kappa tasks unlocked by completing this task
+- **Map batch efficiency** (30%): # of other Kappa tasks on the same map
+- **Kappa requirement** (20%): Binary flag for Kappa-required quests
+
+```typescript
+rec.compositeScore =
+  downstreamNorm * 0.5 + mapBatchNorm * 0.3 + kappaNorm * 0.2;
+```
+
+#### Kappa Progress (`domain/kappaProgress.ts:14`)
+
+Calculates overall and per-trader completion percentage for Kappa-required quests.
+
+#### Next Unlock Preview (`domain/nextUnlock.ts:13`)
+
+Finds tasks that will unlock in the next N levels (default 5), grouped by required level.
+
+### 6. Dexie/IndexedDB (Persistence Layer)
+
+All **user-generated data** is stored in IndexedDB via Dexie v4:
+
+- **`profile`**: Player level, wipe ID
+- **`progress`**: Task completion status (`not_started | in_progress | done`)
+- **`nowPins`**: Pinned tasks in "Now" panel (max 10)
+- **`notes`**: Per-task text notes
+- **`logs`**: Task completion history with timestamps
+- **`hideoutProgress`**: Hideout station construction state
+- **`mapPins`**: User-placed map pins with labels
+- **`hideoutInventory`**: Item counts for hideout construction
+- **`pinPresets`**: Saved map pin configurations
+
+**Schema definition** (`src/db/database.ts:4`):
+
+```typescript
+export class TarkovKappaNaviDB extends Dexie {
+  profile!: Table<Profile, string>;
+  progress!: Table<ProgressRow, string>;
+  nowPins!: Table<NowPins, string>;
+  notes!: Table<NoteRow, string>;
+  logs!: Table<ProgressLog, number>;
+  hideoutProgress!: Table<HideoutProgressRow, string>;
+  mapPins!: Table<MapPinRow, string>;
+  // ...
+}
+```
+
+## Local-First Design Principles
+
+1. **Zero backend dependencies**: All features work entirely in the browser
+2. **Offline-first**: Once API data is cached, the app works offline
+3. **Privacy by default**: User progress never leaves the device (unless manually exported)
+4. **Instant updates**: All mutations are synchronous writes to IndexedDB
+5. **Shareable exports**: QR code + JSON export for cross-device syncing
+
+## Data Separation Strategy
+
+| Data Type | Storage | TTL | Why |
+|-----------|---------|-----|-----|
+| **Game data** (quests, maps, items) | Memory (TanStack Query) | 12 hours | Upstream data changes frequently; no schema migration needed |
+| **User data** (progress, notes, pins) | IndexedDB (Dexie) | Forever | User-owned, must persist across sessions |
+| **UI state** (filters, view mode) | Zustand (memory) | Session only | Ephemeral, no need to persist |
+
+<Note>
+  **Why not persist API data?**  
+  Storing game data in IndexedDB would require schema migrations on every upstream API change. By keeping it in memory, we get fresh data on refresh and avoid version conflicts.
+</Note>
+
+## Key Architectural Decisions
+
+### No Backend Server
+
+**Why**: Tarkov Kappa Navi is a personal progress tracker. A backend would add cost, latency, and privacy concerns with no meaningful benefit.
+
+### Dynamic Lock Calculation
+
+**Why**: Lock state depends on current player level and task completion. Caching it would require invalidation logic on every progress change. Computing it on-demand is simpler and always correct.
+
+### Separate State Management (Zustand + Dexie)
+
+**Why**: Zustand is optimized for ephemeral UI state with React integration. Dexie is optimized for persistent structured data with IndexedDB. Using both keeps each concern isolated and avoids overloading a single state system.
+
+### 12-Hour Cache TTL
+
+**Why**: Tarkov quest data rarely changes mid-wipe. 12 hours balances freshness with reduced API load. The `gcTime: Infinity` ensures the last successful response is always available as a fallback.

@@ -1,0 +1,741 @@
+---
+title: GraphQL Queries
+description: tarkov.dev API integration with GraphQL queries and response types
+---
+
+Tarkov Kappa Navi fetches all game data from the [tarkov.dev GraphQL API](https://tarkov.dev/api/). Queries are defined in `src/api/queries.ts` and executed via TanStack Query with a 12-hour cache TTL.
+
+## API Endpoint
+
+```
+https://api.tarkov.dev/graphql
+```
+
+## Query Execution
+
+All queries are fetched using TanStack Query (React Query) with the following configuration:
+
+```typescript
+const { data } = useQuery({
+  queryKey: ['tasks', lang],
+  queryFn: () => fetchGraphQL(tasksQuery(lang)),
+  staleTime: 12 * 60 * 60 * 1000,  // 12 hours
+  cacheTime: 12 * 60 * 60 * 1000,
+});
+```
+
+---
+
+## tasksQuery
+
+Fetches all quests/tasks with prerequisites, objectives, and trader/map associations.
+
+### Query
+
+```graphql
+query {
+  tasks(lang: ja) {
+    id
+    name
+    trader { id name }
+    map { id name }
+    kappaRequired
+    minPlayerLevel
+    wikiLink
+    taskImageLink
+    taskRequirements {
+      task { id }
+      status
+    }
+    objectives {
+      id
+      type
+      description
+      maps { id name }
+    }
+  }
+}
+```
+
+### Function Signature
+
+```typescript
+function tasksQuery(lang: 'ja' | 'en'): string
+```
+
+<ParamField path="lang" type="'ja' | 'en'">
+  Language for localized task names and descriptions
+</ParamField>
+
+### Response Type
+
+```typescript
+interface ApiTask {
+  id: string;
+  name: string;
+  trader: { id: string; name: string };
+  map: { id: string; name: string } | null;
+  kappaRequired: boolean;
+  minPlayerLevel: number;
+  wikiLink: string;
+  taskImageLink: string | null;
+  taskRequirements: Array<{
+    task: { id: string };
+    status: string[];  // e.g. ["complete"]
+  }>;
+  objectives: Array<{
+    id: string;
+    type: string;  // "kill", "find", "place", etc.
+    description: string;
+    maps: Array<{ id: string; name: string }>;
+  }>;
+}
+
+interface TasksResponse {
+  tasks: ApiTask[];
+}
+```
+
+### Normalized Model
+
+After processing, tasks are normalized to:
+
+```typescript
+interface QuestModel {
+  id: string;
+  name: string;
+  traderId: string;
+  traderName: string;
+  mapId: string | null;
+  mapName: string | null;
+  kappaRequired: boolean;
+  minPlayerLevel: number;
+  wikiLink: string;
+  imageLink: string | null;
+  prereqIds: string[];          // Extracted from taskRequirements
+  objectives: Objective[];
+}
+
+interface Objective {
+  id: string;
+  type: string;
+  description: string;
+  mapIds: string[];             // Extracted from maps[].id
+}
+```
+
+### Usage
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { tasksQuery } from '@/api/queries';
+import { getLang } from '@/i18n';
+
+function useTasks() {
+  const lang = getLang();
+  
+  return useQuery({
+    queryKey: ['tasks', lang],
+    queryFn: async () => {
+      const res = await fetch('https://api.tarkov.dev/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: tasksQuery(lang) })
+      });
+      const json = await res.json();
+      return json.data as TasksResponse;
+    },
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+}
+```
+
+---
+
+## mapsQuery
+
+Fetches map data including bosses, extracts, and raid parameters.
+
+### Query
+
+```graphql
+query {
+  maps(lang: ja) {
+    id
+    name
+    normalizedName
+    description
+    wiki
+    raidDuration
+    players
+    enemies
+    bosses {
+      boss { name normalizedName imagePortraitLink }
+      spawnChance
+      spawnLocations { name chance }
+    }
+    extracts {
+      id
+      name
+      faction
+    }
+  }
+}
+```
+
+### Response Type
+
+```typescript
+interface ApiMap {
+  id: string;
+  name: string;
+  normalizedName: string;
+  description: string | null;
+  wiki: string | null;
+  raidDuration: number | null;    // Minutes
+  players: string | null;         // e.g. "8-12"
+  enemies: string[] | null;       // e.g. ["Scavs", "PMCs"]
+  bosses: Array<{
+    boss: {
+      name: string;
+      normalizedName: string;
+      imagePortraitLink: string | null;
+    };
+    spawnChance: number;            // 0-1
+    spawnLocations: Array<{
+      name: string;
+      chance: number;
+    }>;
+  }>;
+  extracts: Array<{
+    id: string;
+    name: string;
+    faction: string;                // "Any", "USEC", "BEAR"
+  }> | null;
+}
+
+interface MapsResponse {
+  maps: ApiMap[];
+}
+```
+
+### Normalized Model
+
+```typescript
+interface MapModel {
+  id: string;
+  name: string;
+  normalizedName: string;
+  description: string | null;
+  wiki: string | null;
+  raidDuration: number | null;
+  players: string | null;
+  enemies: string[];
+  bosses: BossSpawnModel[];
+  extracts: ExtractModel[];
+}
+
+interface BossSpawnModel {
+  name: string;
+  normalizedName: string;
+  imagePortraitLink: string | null;
+  spawnChance: number;
+  spawnLocationNames: string[];    // Flattened from spawnLocations
+}
+
+interface ExtractModel {
+  id: string;
+  name: string;
+  faction: string;
+}
+```
+
+---
+
+## tradersQuery
+
+Fetches trader basic info.
+
+### Query
+
+```graphql
+query {
+  traders(lang: ja) {
+    id
+    name
+    imageLink
+  }
+}
+```
+
+### Response Type
+
+```typescript
+interface ApiTrader {
+  id: string;
+  name: string;
+  imageLink?: string;
+}
+
+interface TradersResponse {
+  traders: ApiTrader[];
+}
+```
+
+---
+
+## ITEMS_QUERY
+
+Fetches all items with pricing, types, and task relationships. Queries **both** Japanese and English in a single request.
+
+### Query
+
+```graphql
+query {
+  itemsJa: items(lang: ja) {
+    id name shortName iconLink types width height
+    basePrice avg24hPrice low24hPrice high24hPrice
+    sellFor { price source currency }
+    usedInTasks { id }
+    receivedFromTasks { id }
+  }
+  itemsEn: items(lang: en) {
+    id name shortName
+  }
+}
+```
+
+### Response Type
+
+```typescript
+interface ApiItem {
+  id: string;
+  name: string;
+  shortName: string;
+  iconLink: string | null;
+  types: string[];                 // ["weapon", "gun"]
+  width: number;
+  height: number;
+  basePrice: number;
+  avg24hPrice: number | null;
+  low24hPrice: number | null;
+  high24hPrice: number | null;
+  sellFor: Array<{
+    price: number;
+    source: string;                // "Therapist", "Flea Market"
+    currency: string;              // "RUB", "USD", "EUR"
+  }>;
+  usedInTasks: Array<{ id: string }>;
+  receivedFromTasks: Array<{ id: string }>;
+}
+
+interface ItemsResponse {
+  itemsJa: ApiItem[];
+  itemsEn: Array<{
+    id: string;
+    name: string;
+    shortName: string;
+  }>;
+}
+```
+
+### Normalized Model
+
+```typescript
+type PriceTier = 'S' | 'A' | 'B' | 'C' | 'D';
+
+interface ItemModel {
+  id: string;
+  name: string;                    // Japanese
+  nameEn: string;                  // English
+  shortName: string;
+  shortNameEn: string;
+  iconLink: string | null;
+  types: string[];
+  slots: number;                   // width * height
+  basePrice: number;
+  fleaPrice: number | null;        // avg24hPrice
+  bestSellPrice: number;           // Max from sellFor[]
+  bestSellSource: string;          // e.g. "Therapist"
+  pricePerSlot: number;            // bestSellPrice / slots
+  tier: PriceTier;                 // Calculated from pricePerSlot
+  hasTaskUsage: boolean;
+  hasTaskReward: boolean;
+  usedInTaskIds: string[];
+}
+```
+
+**Tier Calculation:**
+
+- **S:** pricePerSlot >= 100,000
+- **A:** 50,000 - 99,999
+- **B:** 20,000 - 49,999
+- **C:** 10,000 - 19,999
+- **D:** < 10,000
+
+<Note>
+Tier thresholds are customizable via `tierStore` (see [Stores](/api/stores#tierstore)).
+</Note>
+
+---
+
+## ITEM_DETAIL_QUERY
+
+Fetches detailed information for specific items including buy options, barters, and crafts.
+
+### Query
+
+```graphql
+query($ids: [ID]) {
+  ja: items(ids: $ids, lang: ja) {
+    id name shortName description image512pxLink wikiLink weight width height
+    buyFor { price source currency priceRUB requirements { type value } }
+    usedInTasks { id name trader { name } kappaRequired }
+    receivedFromTasks { id name trader { name } }
+    bartersFor { trader { name } level taskUnlock { name }
+      requiredItems { item { name iconLink } count }
+      rewardItems { item { name iconLink } count } }
+    bartersUsing { trader { name } level taskUnlock { name }
+      requiredItems { item { name iconLink } count }
+      rewardItems { item { name iconLink } count } }
+    craftsFor { station { name } level duration
+      requiredItems { item { name iconLink } count }
+      rewardItems { item { name iconLink } count } }
+    craftsUsing { station { name } level duration
+      requiredItems { item { name iconLink } count }
+      rewardItems { item { name iconLink } count } }
+  }
+  en: items(ids: $ids, lang: en) { id name shortName }
+}
+```
+
+### Variables
+
+```typescript
+{
+  ids: ["item-id-1", "item-id-2"]
+}
+```
+
+### Response Type
+
+```typescript
+interface ApiItemDetailFull {
+  id: string;
+  name: string;
+  shortName: string;
+  description: string | null;
+  image512pxLink: string | null;
+  wikiLink: string | null;
+  weight: number | null;
+  width: number;
+  height: number;
+  buyFor: Array<{
+    price: number;
+    source: string;
+    currency: string;
+    priceRUB: number;
+    requirements: Array<{
+      type: string;      // "loyaltyLevel", "playerLevel"
+      value: number;
+    }>;
+  }>;
+  usedInTasks: Array<{
+    id: string;
+    name: string;
+    trader: { name: string };
+    kappaRequired?: boolean;
+  }>;
+  receivedFromTasks: Array<{
+    id: string;
+    name: string;
+    trader: { name: string };
+  }>;
+  bartersFor: Array<{
+    trader: { name: string };
+    level: number;
+    taskUnlock: { name: string } | null;
+    requiredItems: Array<{
+      item: { name: string; iconLink: string | null };
+      count: number;
+    }>;
+    rewardItems: Array<{
+      item: { name: string; iconLink: string | null };
+      count: number;
+    }>;
+  }>;
+  bartersUsing: Array<{...}>;
+  craftsFor: Array<{
+    station: { name: string };
+    level: number;
+    duration: number;              // Seconds
+    requiredItems: Array<{...}>;
+    rewardItems: Array<{...}>;
+  }>;
+  craftsUsing: Array<{...}>;
+}
+
+interface ItemDetailResponse {
+  ja: ApiItemDetailFull[];
+  en: Array<{ id: string; name: string; shortName: string }>;
+}
+```
+
+### Usage
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { ITEM_DETAIL_QUERY } from '@/api/queries';
+
+function useItemDetail(itemIds: string[]) {
+  return useQuery({
+    queryKey: ['itemDetail', itemIds],
+    queryFn: async () => {
+      const res = await fetch('https://api.tarkov.dev/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: ITEM_DETAIL_QUERY,
+          variables: { ids: itemIds }
+        })
+      });
+      const json = await res.json();
+      return json.data as ItemDetailResponse;
+    },
+    enabled: itemIds.length > 0,
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+}
+```
+
+---
+
+## hideoutQuery
+
+Fetches hideout stations with level requirements, crafts, and bonuses.
+
+### Query
+
+```graphql
+query {
+  hideoutStations(lang: ja) {
+    id name normalizedName imageLink
+    levels {
+      id level constructionTime description
+      itemRequirements { item { id name iconLink } count }
+      stationLevelRequirements { station { id name } level }
+      skillRequirements { name level }
+      traderRequirements { trader { id name } level }
+      crafts {
+        id
+        station { id name }
+        level
+        taskUnlock { id name }
+        duration
+        requiredItems { item { id name iconLink } count }
+        rewardItems { item { id name iconLink } count }
+      }
+      bonuses { type name value }
+    }
+  }
+}
+```
+
+### Response Type
+
+```typescript
+interface ApiHideoutStation {
+  id: string;
+  name: string;
+  normalizedName: string;
+  imageLink: string | null;
+  levels: Array<{
+    id: string;
+    level: number;
+    constructionTime: number;        // Seconds
+    description: string | null;
+    itemRequirements: Array<{
+      item: { id: string; name: string; iconLink: string | null };
+      count: number;
+    }>;
+    stationLevelRequirements: Array<{
+      station: { id: string; name: string };
+      level: number;
+    }>;
+    skillRequirements: Array<{
+      name: string;
+      level: number;
+    }>;
+    traderRequirements: Array<{
+      trader: { id: string; name: string };
+      level: number;
+    }>;
+    crafts: Array<{
+      id: string;
+      station: { id: string; name: string };
+      level: number;
+      taskUnlock: { id: string; name: string } | null;
+      duration: number;
+      requiredItems: Array<{...}>;
+      rewardItems: Array<{...}>;
+    }>;
+    bonuses: Array<{
+      type: string;
+      name: string;
+      value: number;
+    }>;
+  }>;
+}
+
+interface HideoutStationsResponse {
+  hideoutStations: ApiHideoutStation[];
+}
+```
+
+### Normalized Model
+
+```typescript
+interface HideoutStationModel {
+  id: string;
+  name: string;
+  normalizedName: string;
+  imageLink: string | null;
+  levels: HideoutLevelModel[];
+  maxLevel: number;                  // Calculated from levels.length
+}
+
+interface HideoutLevelModel {
+  id: string;
+  stationId: string;
+  level: number;
+  constructionTime: number;
+  description: string | null;
+  itemRequirements: ItemRequirement[];
+  stationLevelRequirements: StationLevelRequirement[];
+  skillRequirements: SkillRequirement[];
+  traderRequirements: TraderRequirement[];
+  crafts: CraftModel[];
+  bonuses: BonusModel[];
+}
+
+interface ItemRequirement {
+  itemId: string;
+  itemName: string;
+  iconLink: string | null;
+  count: number;
+}
+
+interface StationLevelRequirement {
+  stationId: string;
+  stationName: string;
+  level: number;
+}
+
+interface SkillRequirement {
+  name: string;
+  level: number;
+}
+
+interface TraderRequirement {
+  traderId: string;
+  traderName: string;
+  level: number;
+}
+
+interface BonusModel {
+  type: string;
+  name: string;
+  value: number;
+}
+
+interface CraftModel {
+  id: string;
+  stationId: string;
+  level: number;
+  taskUnlockId: string | null;
+  taskUnlockName: string | null;
+  duration: number;
+  requiredItems: ItemRequirement[];
+  rewardItems: ItemRequirement[];
+}
+```
+
+---
+
+## Caching Strategy
+
+All queries use TanStack Query with:
+
+- **staleTime:** 12 hours (game data rarely changes)
+- **cacheTime:** 12 hours
+- **refetchOnWindowFocus:** `false` (optional)
+- **refetchOnMount:** `false` (optional)
+
+### Example Cache Configuration
+
+```typescript
+import { QueryClient } from '@tanstack/react-query';
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 12 * 60 * 60 * 1000,     // 12 hours
+      cacheTime: 12 * 60 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 2,
+    },
+  },
+});
+```
+
+---
+
+## Error Handling
+
+```typescript
+const { data, error, isLoading } = useQuery({
+  queryKey: ['tasks', lang],
+  queryFn: async () => {
+    const res = await fetch('https://api.tarkov.dev/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: tasksQuery(lang) })
+    });
+    
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+    
+    const json = await res.json();
+    
+    if (json.errors) {
+      throw new Error(json.errors[0]?.message ?? 'GraphQL error');
+    }
+    
+    return json.data as TasksResponse;
+  },
+});
+
+if (error) {
+  return <div>Error: {error.message}</div>;
+}
+```
+
+---
+
+## Language Switching
+
+Some queries support language parameters. When language changes, React Query will automatically refetch:
+
+```typescript
+const lang = useProfileStore(state => state.lang);
+
+const { data } = useQuery({
+  queryKey: ['tasks', lang],  // Key changes when lang changes
+  queryFn: () => fetchGraphQL(tasksQuery(lang)),
+});
+```
+
+<Tip>
+For items, both languages are fetched in a single request (`ITEMS_QUERY`) to avoid duplicate API calls.
+</Tip>

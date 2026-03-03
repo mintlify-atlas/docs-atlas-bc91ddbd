@@ -1,0 +1,295 @@
+---
+title: Contributing Guidelines
+description: Code style, conventions, and best practices for contributing to Tarkov Kappa Navi
+---
+
+Thank you for your interest in contributing to Tarkov Kappa Navi! This guide outlines our coding standards and contribution workflow.
+
+## Code Style
+
+### TypeScript
+
+We use **TypeScript in strict mode** for all code. The project enforces strict type checking:
+
+```json tsconfig.app.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}
+```
+
+<Note>
+Always define explicit types for function parameters and return values. Avoid using `any` unless absolutely necessary.
+</Note>
+
+### File Naming Conventions
+
+Follow these naming patterns observed in the codebase:
+
+- **React Components**: PascalCase with `.tsx` extension
+  - Example: `DashboardPage.tsx`, `TaskDetail.tsx`, `KappaProgressSection.tsx`
+
+- **Utilities and Logic**: camelCase with `.ts` extension
+  - Example: `unlock.ts`, `kappaProgress.ts`, `normalize.ts`
+
+- **Test Files**: Same name as the file being tested with `.test.ts` or `.test.tsx`
+  - Example: `unlock.test.ts`, `recommendations.test.ts`
+  - Place tests in `__tests__` directories within their feature folder
+
+- **Type Definitions**: `types.ts` within each feature directory
+
+### Component Organization
+
+Components are organized by **feature** rather than by type:
+
+```
+components/
+├── dashboard/        # All dashboard-related components
+├── tasks/           # All task list components
+├── map/             # All map components
+└── ui/              # Shared, reusable UI components
+```
+
+<Tip>
+When creating a new component, place it in the appropriate feature directory. Only use `components/ui/` for truly generic, reusable components.
+</Tip>
+
+## State Management Patterns
+
+### When to Use Zustand
+
+Use **Zustand stores** for UI state that needs to be shared across components:
+
+- View mode toggles (list/flow view)
+- Filter selections
+- Panel open/closed states
+- Active selections
+
+Example from the codebase:
+```typescript
+// stores/taskViewStore.ts
+import { create } from 'zustand';
+
+interface TaskViewStore {
+  viewMode: 'list' | 'flow';
+  setViewMode: (mode: 'list' | 'flow') => void;
+}
+
+export const useTaskViewStore = create<TaskViewStore>((set) => ({
+  viewMode: 'list',
+  setViewMode: (mode) => set({ viewMode: mode }),
+}));
+```
+
+### When to Use TanStack Query
+
+Use **TanStack Query** for server state (API data):
+
+- Fetching data from tarkov.dev GraphQL API
+- Caching API responses (12-hour TTL)
+- Handling loading and error states
+
+Example:
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+export function useTasks() {
+  return useQuery({
+    queryKey: ['tasks'],
+    queryFn: fetchTasks,
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours
+  });
+}
+```
+
+### When to Use Dexie (IndexedDB)
+
+Use **Dexie** for persistent user data:
+
+- User profile and player level
+- Task progress and completion status
+- Notes and pins
+- Hideout progress
+- Settings and preferences
+
+<Note>
+Never store API data in IndexedDB. API data should only be cached in memory via TanStack Query.
+</Note>
+
+## Domain Logic
+
+Keep domain logic **pure and testable** in the `src/domain/` directory:
+
+- No React dependencies
+- No side effects
+- Fully unit tested
+- Clear input/output contracts
+
+Example:
+```typescript
+// src/domain/unlock.ts
+export function isTaskUnlocked(
+  quest: QuestModel,
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>
+): boolean {
+  // Level requirement
+  if (playerLevel < quest.minPlayerLevel) return false;
+  
+  // Prerequisite requirement
+  return quest.prereqIds.every(
+    (id) => progressMap.get(id) === 'done'
+  );
+}
+```
+
+## Commit Message Conventions
+
+Write clear, descriptive commit messages that explain **why** the change was made:
+
+### Format
+
+```
+<type>: <description>
+
+[optional body]
+```
+
+### Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code restructuring without behavior change
+- `test`: Adding or updating tests
+- `docs`: Documentation updates
+- `style`: Code style changes (formatting, missing semicolons, etc.)
+- `chore`: Build process, dependencies, tooling
+
+### Examples
+
+```
+feat: add bulk complete action for prerequisite tasks
+
+fix: prevent duplicate pins when dragging on map
+
+refactor: extract unlock logic into testable functions
+
+test: add coverage for Kappa progress calculations
+```
+
+<Tip>
+Focus on the "why" rather than the "what". The diff shows what changed; the commit message should explain why it was necessary.
+</Tip>
+
+## Pull Request Process
+
+<Steps>
+  <Step title="Create a feature branch">
+    Create a new branch from `main` for your changes:
+
+    ```bash
+    git checkout main
+    git pull upstream main
+    git checkout -b feat/your-feature-name
+    ```
+  </Step>
+
+  <Step title="Make your changes">
+    - Write clean, tested code
+    - Follow the coding conventions above
+    - Add tests for new functionality
+    - Update documentation if needed
+  </Step>
+
+  <Step title="Test your changes">
+    Before committing, ensure:
+
+    ```bash
+    npm run lint    # No linting errors
+    npm run test    # All tests pass
+    npm run build   # Build succeeds
+    ```
+  </Step>
+
+  <Step title="Commit and push">
+    Commit your changes with a clear message:
+
+    ```bash
+    git add .
+    git commit -m "feat: your feature description"
+    git push origin feat/your-feature-name
+    ```
+  </Step>
+
+  <Step title="Open a pull request">
+    - Go to your fork on GitHub
+    - Click "Compare & pull request"
+    - Fill out the PR template with:
+      - What changed
+      - Why it's needed
+      - How to test it
+      - Screenshots (if UI changes)
+  </Step>
+</Steps>
+
+## Code Review Expectations
+
+When reviewing or being reviewed:
+
+### For Authors
+
+- Keep PRs focused and reasonably sized
+- Respond to feedback promptly and professionally
+- Update your PR based on review comments
+- Test your changes thoroughly before requesting review
+
+### For Reviewers
+
+- Be respectful and constructive
+- Explain the "why" behind suggestions
+- Approve when the code meets standards, even if you'd do it differently
+- Focus on correctness, maintainability, and adherence to conventions
+
+## Documentation Updates
+
+Update documentation when:
+
+- Adding new features
+- Changing existing behavior
+- Adding new configuration options
+- Updating dependencies with breaking changes
+
+Documentation lives in:
+- `README.md` for project overview and setup
+- Code comments for complex logic
+- Type definitions for API contracts
+
+## License and Attribution
+
+This project is released under the **MIT License**:
+
+```
+MIT License
+
+Copyright (c) 2026 marlho
+```
+
+By contributing, you agree that your contributions will be licensed under the MIT License.
+
+<Note>
+**Important**: This project is not affiliated with or endorsed by Battlestate Games. Game content and materials are trademarks and copyrights of Battlestate Games.
+</Note>
+
+## Questions?
+
+If you have questions about contributing:
+
+- Check existing [GitHub Issues](https://github.com/marlho/TarkovKappaNavi/issues)
+- Open a new issue for discussion
+- Review merged PRs for examples
+
+Thank you for contributing to Tarkov Kappa Navi!

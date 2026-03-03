@@ -1,0 +1,505 @@
+---
+title: Database Schema
+description: Dexie database schema with IndexedDB tables for local data persistence
+---
+
+Tarkov Kappa Navi uses [Dexie.js](https://dexie.org/) as an abstraction layer over the browser's IndexedDB to store user data locally. All progress, settings, and customizations are persisted in the client browser.
+
+## Database Class
+
+The database is defined in `src/db/database.ts`:
+
+```typescript
+export class TarkovKappaNaviDB extends Dexie {
+  profile!: Table<Profile, string>;
+  progress!: Table<ProgressRow, string>;
+  nowPins!: Table<NowPins, string>;
+  notes!: Table<NoteRow, string>;
+  logs!: Table<ProgressLog, number>;
+  hideoutProgress!: Table<HideoutProgressRow, string>;
+  mapPins!: Table<MapPinRow, string>;
+  hideoutInventory!: Table<HideoutItemInventoryRow, string>;
+  hideoutLevelInventory!: Table<HideoutLevelInventoryRow, [string, string]>;
+  pinPresets!: Table<PinPresetRow, string>;
+}
+```
+
+## Tables
+
+### profile
+
+Stores the current user profile. Always contains a single row with `id: "me"`.
+
+**Primary Key:** `id`
+
+**Schema:**
+
+```typescript
+interface Profile {
+  id: string;                    // Always "me"
+  currentLevel: number;          // Player level 1-79
+  wipeId: string;                // Identifies the current wipe
+  autoStartUnlocked?: boolean;   // Auto-start unlocked tasks
+  lang?: 'ja' | 'en';            // UI/API language
+  onboardingDone?: boolean;      // First-time onboarding complete
+  updatedAt: number;             // Epoch milliseconds
+}
+```
+
+**Usage:**
+- Stores player level for unlock calculations
+- Tracks current wipe to isolate progress data
+- Controls auto-start behavior for newly unlocked tasks
+
+---
+
+### progress
+
+Tracks completion status for each task.
+
+**Primary Key:** `taskId`
+
+**Indexes:** `status`
+
+**Schema:**
+
+```typescript
+type TaskStatus = 'not_started' | 'in_progress' | 'done';
+
+interface ProgressRow {
+  taskId: string;
+  status: TaskStatus;
+  completedAt: number | null;    // Epoch ms, null if incomplete
+  updatedAt: number;             // Epoch ms
+}
+```
+
+**Query Patterns:**
+
+```typescript
+// Get all in-progress tasks
+const inProgress = await db.progress
+  .where('status')
+  .equals('in_progress')
+  .toArray();
+
+// Get status for specific task
+const status = await db.progress.get(taskId);
+
+// Update task status
+await db.progress.put({
+  taskId: 'task-id',
+  status: 'done',
+  completedAt: Date.now(),
+  updatedAt: Date.now()
+});
+```
+
+---
+
+### nowPins
+
+Stores pinned "active" tasks shown in the Now panel. Single row with `id: "me"`.
+
+**Primary Key:** `id`
+
+**Schema:**
+
+```typescript
+interface NowPins {
+  id: string;          // Always "me"
+  taskIds: string[];   // Max 10 tasks
+}
+```
+
+**Usage:**
+
+```typescript
+// Load current pins
+const pins = await db.nowPins.get('me');
+
+// Update pins
+await db.nowPins.put({
+  id: 'me',
+  taskIds: ['task-1', 'task-2', 'task-3']
+});
+```
+
+---
+
+### notes
+
+Per-task user notes.
+
+**Primary Key:** `taskId`
+
+**Schema:**
+
+```typescript
+interface NoteRow {
+  taskId: string;
+  text: string;
+  updatedAt: number;   // Epoch ms
+}
+```
+
+**Usage:**
+
+```typescript
+// Save note
+await db.notes.put({
+  taskId: 'some-task',
+  text: 'Need to bring IFAK',
+  updatedAt: Date.now()
+});
+
+// Get note
+const note = await db.notes.get(taskId);
+
+// Delete note
+await db.notes.delete(taskId);
+```
+
+---
+
+### logs
+
+Audit log of all status transitions for analytics and undo functionality.
+
+**Primary Key:** `++id` (auto-increment)
+
+**Indexes:** `taskId`, `at`
+
+**Schema:**
+
+```typescript
+interface ProgressLog {
+  id?: number;         // Auto-increment
+  taskId: string;
+  from: TaskStatus;
+  to: TaskStatus;
+  at: number;          // Epoch ms
+  reason: string;      // e.g. "manual", "bulk_prereq_complete"
+}
+```
+
+**Query Patterns:**
+
+```typescript
+// Get all logs for a task
+const taskLogs = await db.logs
+  .where('taskId')
+  .equals(taskId)
+  .reverse()
+  .toArray();
+
+// Get recent logs
+const recent = await db.logs
+  .orderBy('at')
+  .reverse()
+  .limit(50)
+  .toArray();
+
+// Log a status change
+await db.logs.add({
+  taskId: 'task-id',
+  from: 'not_started',
+  to: 'in_progress',
+  at: Date.now(),
+  reason: 'manual'
+});
+```
+
+---
+
+### hideoutProgress
+
+Tracks built hideout station levels.
+
+**Primary Key:** `levelId`
+
+**Indexes:** `stationId`
+
+**Schema:**
+
+```typescript
+interface HideoutProgressRow {
+  levelId: string;     // Unique level ID from tarkov.dev
+  stationId: string;   // Station ID
+  level: number;       // Level number
+  builtAt: number;     // Epoch ms when built
+}
+```
+
+**Query Patterns:**
+
+```typescript
+// Get all built levels for a station
+const builtLevels = await db.hideoutProgress
+  .where('stationId')
+  .equals(stationId)
+  .toArray();
+
+// Mark level as built
+await db.hideoutProgress.put({
+  levelId: 'level-id',
+  stationId: 'station-id',
+  level: 2,
+  builtAt: Date.now()
+});
+
+// Get all built level IDs
+const allBuilt = await db.hideoutProgress.toArray();
+const builtIds = new Set(allBuilt.map(row => row.levelId));
+```
+
+---
+
+### mapPins
+
+User-created map pins with labels and visual customization.
+
+**Primary Key:** `id` (UUID)
+
+**Indexes:** `[mapId+wipeId+viewMode]` (compound)
+
+**Schema:**
+
+```typescript
+type PinColor = 'red' | 'blue' | 'yellow' | 'green' | 'purple' | 'white';
+type PinShape = 'circle' | 'diamond' | 'square' | 'triangle' | 'star' | 'marker';
+
+interface MapPinRow {
+  id: string;              // crypto.randomUUID()
+  mapId: string;           // tarkov.dev mapId
+  wipeId: string;          // Profile.wipeId
+  viewMode: '2d' | '3d';   // Separate pins per view mode
+  label: string;           // Max 100 characters
+  color: PinColor;
+  shape: PinShape;
+  x: number;               // 0-100 (%)
+  y: number;               // 0-100 (%)
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+**Query Patterns:**
+
+```typescript
+// Get pins for a specific map/wipe/view
+const pins = await db.mapPins
+  .where('[mapId+wipeId+viewMode]')
+  .equals([mapId, wipeId, '3d'])
+  .toArray();
+
+// Create pin
+await db.mapPins.add({
+  id: crypto.randomUUID(),
+  mapId: 'customs',
+  wipeId: 'default',
+  viewMode: '3d',
+  label: 'USEC Camp',
+  color: 'red',
+  shape: 'marker',
+  x: 45.2,
+  y: 67.8,
+  createdAt: Date.now(),
+  updatedAt: Date.now()
+});
+
+// Delete pin
+await db.mapPins.delete(pinId);
+```
+
+---
+
+### hideoutInventory
+
+Legacy global item inventory (deprecated, kept for migration).
+
+**Primary Key:** `itemId`
+
+**Schema:**
+
+```typescript
+interface HideoutItemInventoryRow {
+  itemId: string;
+  ownedCount: number;   // >= 0
+}
+```
+
+<Note>
+This table is deprecated. Use `hideoutLevelInventory` for per-level item tracking.
+</Note>
+
+---
+
+### hideoutLevelInventory
+
+Per-level item inventory for hideout upgrades.
+
+**Primary Key:** `[levelId+itemId]` (compound)
+
+**Indexes:** `itemId`
+
+**Schema:**
+
+```typescript
+interface HideoutLevelInventoryRow {
+  levelId: string;      // HideoutLevelModel.id
+  itemId: string;       // Item ID from tarkov.dev
+  ownedCount: number;   // >= 0
+}
+```
+
+**Query Patterns:**
+
+```typescript
+// Get owned count for specific item in specific level
+const row = await db.hideoutLevelInventory.get([levelId, itemId]);
+const owned = row?.ownedCount ?? 0;
+
+// Update owned count
+await db.hideoutLevelInventory.put({
+  levelId: 'level-id',
+  itemId: 'item-id',
+  ownedCount: 5
+});
+
+// Get all items for a level
+const items = await db.hideoutLevelInventory
+  .where('[levelId+itemId]')
+  .between([levelId, ''], [levelId, '\uffff'])
+  .toArray();
+```
+
+---
+
+### pinPresets
+
+Saved map pin configurations for quick restore.
+
+**Primary Key:** `id` (UUID)
+
+**Indexes:** `createdAt`
+
+**Schema:**
+
+```typescript
+interface PinPresetRow {
+  id: string;          // crypto.randomUUID()
+  name: string;
+  pins: Array<{
+    mapId: string;
+    viewMode: '2d' | '3d';
+    label: string;
+    color: string;
+    shape: string;
+    x: number;
+    y: number;
+  }>;
+  createdAt: number;
+}
+```
+
+**Usage:**
+
+```typescript
+// Save preset
+await db.pinPresets.add({
+  id: crypto.randomUUID(),
+  name: 'Customs Quest Locations',
+  pins: [...currentPins],
+  createdAt: Date.now()
+});
+
+// Load all presets
+const presets = await db.pinPresets
+  .orderBy('createdAt')
+  .reverse()
+  .toArray();
+
+// Delete preset
+await db.pinPresets.delete(presetId);
+```
+
+---
+
+## Validation Schemas
+
+All database types have corresponding Zod schemas in `src/db/schemas.ts` for validation during import/export:
+
+```typescript
+import { z } from 'zod';
+
+export const profileSchema = z.object({
+  id: z.string(),
+  currentLevel: z.number().int().min(1).max(79),
+  wipeId: z.string().default('default'),
+  autoStartUnlocked: z.boolean().optional(),
+  updatedAt: z.number(),
+});
+
+export const progressRowSchema = z.object({
+  taskId: z.string(),
+  status: z.enum(['not_started', 'in_progress', 'done']),
+  completedAt: z.number().nullable(),
+  updatedAt: z.number(),
+});
+
+// Full export/import schema
+export const exportDataSchema = z.object({
+  profile: profileSchema,
+  progress: z.array(progressRowSchema),
+  nowPins: nowPinsSchema,
+  notes: z.array(noteRowSchema),
+  logs: z.array(progressLogSchema),
+  hideoutProgress: z.array(hideoutProgressRowSchema).optional(),
+  mapPins: z.array(mapPinRowSchema).optional(),
+  hideoutItemInventory: z.array(
+    z.union([hideoutLevelInventoryRowSchema, legacyGlobalInventoryRowSchema]),
+  ).optional(),
+});
+```
+
+## Database Instance
+
+A singleton instance is exported for use throughout the app:
+
+```typescript
+import { db } from '@/db/database';
+
+// Use in components or services
+const profile = await db.profile.get('me');
+const allProgress = await db.progress.toArray();
+```
+
+## Migration Strategy
+
+The database uses Dexie's versioning system. Current version is `1`:
+
+```typescript
+this.version(1).stores({
+  profile: 'id',
+  progress: 'taskId, status',
+  nowPins: 'id',
+  notes: 'taskId',
+  logs: '++id, taskId, at',
+  hideoutProgress: 'levelId, stationId',
+  mapPins: 'id, [mapId+wipeId+viewMode]',
+  hideoutInventory: 'itemId',
+  hideoutLevelInventory: '[levelId+itemId], itemId',
+  pinPresets: 'id, createdAt',
+});
+```
+
+For schema changes, increment the version and provide upgrade logic:
+
+```typescript
+this.version(2).stores({
+  // Updated schema
+}).upgrade(tx => {
+  // Migration logic
+});
+```

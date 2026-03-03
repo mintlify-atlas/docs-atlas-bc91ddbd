@@ -1,0 +1,687 @@
+---
+title: Domain Logic
+description: Core business logic functions for task unlocks, progress tracking, and recommendations
+---
+
+Domain logic modules contain pure functions for calculations, filtering, and business rules. They are located in `src/domain/` and are framework-agnostic.
+
+## unlock.ts
+
+Determines whether tasks are unlocked based on player level and prerequisite completion.
+
+### isTaskUnlocked
+
+Checks if a task is currently unlocked.
+
+```typescript
+function isTaskUnlocked(
+  task: QuestModel,
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): boolean
+```
+
+<ParamField path="task" type="QuestModel">
+  The quest to check
+</ParamField>
+
+<ParamField path="playerLevel" type="number">
+  Current player level (1-79)
+</ParamField>
+
+<ParamField path="progressMap" type="Map<string, TaskStatus>">
+  Map of taskId → current status
+</ParamField>
+
+<ResponseField name="returns" type="boolean">
+  `true` if unlocked, `false` if locked by level or prerequisites
+</ResponseField>
+
+**Unlock Conditions:**
+1. `playerLevel >= task.minPlayerLevel`
+2. All prerequisite tasks have status `'done'`
+
+**Example:**
+
+```typescript
+import { isTaskUnlocked } from '@/domain/unlock';
+
+const unlocked = isTaskUnlocked(
+  quest,
+  currentLevel,
+  new Map(progress.map(p => [p.taskId, p.status]))
+);
+```
+
+---
+
+### getTaskLockState
+
+Returns why a task is locked (or unlocked).
+
+```typescript
+type TaskLockState = 'unlocked' | 'level_locked' | 'prereq_locked';
+
+function getTaskLockState(
+  task: QuestModel,
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): TaskLockState
+```
+
+<ResponseField name="unlocked" type="TaskLockState">
+  Task is available
+</ResponseField>
+
+<ResponseField name="level_locked" type="TaskLockState">
+  Player level is too low
+</ResponseField>
+
+<ResponseField name="prereq_locked" type="TaskLockState">
+  Prerequisite tasks not completed
+</ResponseField>
+
+---
+
+### partitionByLock
+
+Splits quests into unlocked and locked lists.
+
+```typescript
+function partitionByLock(
+  quests: QuestModel[],
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): { unlocked: QuestModel[]; locked: QuestModel[] }
+```
+
+---
+
+### findAutoStartCandidates
+
+Finds tasks that can be auto-started (not started + unlocked).
+
+```typescript
+function findAutoStartCandidates(
+  quests: QuestModel[],
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): string[]  // Returns taskIds
+```
+
+---
+
+## kappaProgress.ts
+
+Calculates Kappa container progress statistics.
+
+### calcKappaProgress
+
+Computes overall Kappa completion.
+
+```typescript
+interface KappaStats {
+  total: number;
+  done: number;
+  remaining: number;
+  percent: number;
+}
+
+function calcKappaProgress(
+  quests: QuestModel[],
+  progressMap: Map<string, TaskStatus>,
+): KappaStats
+```
+
+<ParamField path="quests" type="QuestModel[]">
+  All quests (filters for `kappaRequired: true` internally)
+</ParamField>
+
+<ParamField path="progressMap" type="Map<string, TaskStatus>">
+  Current progress state
+</ParamField>
+
+<ResponseField name="total" type="number">
+  Total Kappa-required tasks
+</ResponseField>
+
+<ResponseField name="done" type="number">
+  Completed Kappa tasks
+</ResponseField>
+
+<ResponseField name="remaining" type="number">
+  Tasks left to complete
+</ResponseField>
+
+<ResponseField name="percent" type="number">
+  Completion percentage (0-100)
+</ResponseField>
+
+**Example:**
+
+```typescript
+import { calcKappaProgress } from '@/domain/kappaProgress';
+
+const stats = calcKappaProgress(quests, progressMap);
+console.log(`Kappa Progress: ${stats.done}/${stats.total} (${stats.percent}%)`);
+```
+
+---
+
+### calcKappaByTrader
+
+Breaks down Kappa progress by trader.
+
+```typescript
+interface TraderKappaStats {
+  traderId: string;
+  traderName: string;
+  total: number;
+  done: number;
+  percent: number;
+}
+
+function calcKappaByTrader(
+  quests: QuestModel[],
+  progressMap: Map<string, TaskStatus>,
+): TraderKappaStats[]
+```
+
+**Example:**
+
+```typescript
+const byTrader = calcKappaByTrader(quests, progressMap);
+byTrader.forEach(t => {
+  console.log(`${t.traderName}: ${t.done}/${t.total} (${t.percent}%)`);
+});
+```
+
+---
+
+## recommendations.ts
+
+Generates task recommendations based on downstream impact, map batching, and Kappa priority.
+
+### Scoring Algorithm
+
+Composite score = `(downstreamNorm × 0.5) + (mapBatchNorm × 0.3) + (kappaNorm × 0.2)`
+
+- **Downstream Impact (50%):** Number of future Kappa tasks unlocked
+- **Map Batching (30%):** Other tasks on the same map
+- **Kappa Required (20%):** Is this task required for Kappa?
+
+---
+
+### getRecommendations
+
+Returns top recommended tasks and map batch groups.
+
+```typescript
+interface TaskRecommendation {
+  quest: QuestModel;
+  compositeScore: number;
+  downstreamCount: number;      // How many future tasks this unlocks
+  mapBatchCount: number;        // Other tasks on same map
+  isKappaRequired: boolean;
+  reasons: string[];            // Human-readable reasons
+}
+
+interface MapBatchGroup {
+  mapId: string;
+  mapName: string;
+  tasks: TaskRecommendation[];
+  count: number;
+}
+
+interface RecommendationResult {
+  topTasks: TaskRecommendation[];    // Top 5 by score
+  mapBatches: MapBatchGroup[];       // Maps with 2+ tasks
+}
+
+function getRecommendations(
+  quests: QuestModel[],
+  prereqEdges: Map<string, string[]>,
+  progressMap: Map<string, TaskStatus>,
+  playerLevel: number,
+  mapNames?: Map<string, string>,
+): RecommendationResult
+```
+
+<ParamField path="quests" type="QuestModel[]">
+  All quests
+</ParamField>
+
+<ParamField path="prereqEdges" type="Map<string, string[]>">
+  Prerequisite graph (taskId → prereqIds)
+</ParamField>
+
+<ParamField path="progressMap" type="Map<string, TaskStatus>">
+  Current progress
+</ParamField>
+
+<ParamField path="playerLevel" type="number">
+  Current player level
+</ParamField>
+
+<ParamField path="mapNames" type="Map<string, string>" optional>
+  Map ID to display name lookup
+</ParamField>
+
+**Example:**
+
+```typescript
+import { getRecommendations } from '@/domain/recommendations';
+
+const { topTasks, mapBatches } = getRecommendations(
+  quests,
+  prereqEdges,
+  progressMap,
+  playerLevel,
+  mapNames
+);
+
+// Display top recommendations
+topTasks.forEach((rec, i) => {
+  console.log(`${i + 1}. ${rec.quest.name} (score: ${rec.compositeScore.toFixed(2)})`);
+  console.log(`   Reasons: ${rec.reasons.join(', ')}`);
+});
+
+// Display map batches
+mapBatches.forEach(batch => {
+  console.log(`${batch.mapName}: ${batch.count} tasks`);
+});
+```
+
+---
+
+### Helper Functions
+
+#### buildReverseDependencyGraph
+
+Inverts the prerequisite graph to find dependent tasks.
+
+```typescript
+function buildReverseDependencyGraph(
+  prereqEdges: Map<string, string[]>,
+): Map<string, string[]>  // taskId → dependentTaskIds
+```
+
+#### countDownstreamTasks
+
+Counts how many incomplete tasks depend on a given task (BFS with cycle guard).
+
+```typescript
+function countDownstreamTasks(
+  taskId: string,
+  reverseDeps: Map<string, string[]>,
+  progressMap: Map<string, TaskStatus>,
+  kappaTaskIds?: Set<string>,
+): number
+```
+
+#### getTaskMapIds
+
+Extracts all maps associated with a task (from `quest.mapId` and objectives).
+
+```typescript
+function getTaskMapIds(quest: QuestModel): string[]
+```
+
+---
+
+## taskFilters.ts
+
+Filtering and enrichment logic for the Tasks page.
+
+### enrichTasks
+
+Adds status and lock state to each quest.
+
+```typescript
+interface EnrichedTask {
+  quest: QuestModel;
+  status: TaskStatus;
+  lockState: TaskLockState;
+}
+
+function enrichTasks(
+  quests: QuestModel[],
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+): EnrichedTask[]
+```
+
+---
+
+### filterTasks
+
+Applies filters and sorts tasks for the UI.
+
+```typescript
+interface FilterParams {
+  traders: string[];
+  maps: string[];
+  types: string[];           // Objective types
+  statuses: TaskStatus[];
+  search: string;
+  kappaOnly: boolean;
+}
+
+function filterTasks(
+  tasks: EnrichedTask[],
+  filters: FilterParams,
+): EnrichedTask[]
+```
+
+**Sort Order:**
+1. Unlocked tasks first
+2. Then by `minPlayerLevel` (ascending)
+3. Then by name (alphabetical)
+
+**Example:**
+
+```typescript
+import { enrichTasks, filterTasks } from '@/domain/taskFilters';
+import { useFilterStore } from '@/stores/filterStore';
+
+const enriched = enrichTasks(quests, playerLevel, progressMap);
+const filters = useFilterStore();
+const filtered = filterTasks(enriched, filters);
+```
+
+---
+
+## prereqTree.ts
+
+Builds prerequisite dependency trees for UI visualization.
+
+### collectIncompletePrereqs
+
+Recursively collects incomplete prerequisites in dependency order (DFS).
+
+```typescript
+function collectIncompletePrereqs(
+  taskId: string,
+  prereqEdges: Map<string, string[]>,
+  progressMap: Map<string, TaskStatus>,
+): string[]  // Deepest prereqs first
+```
+
+---
+
+### buildPrereqTree
+
+Builds a tree structure of incomplete prerequisites.
+
+```typescript
+interface PrereqNode {
+  taskId: string;
+  name: string;
+  status: TaskStatus;
+  children: PrereqNode[];
+}
+
+function buildPrereqTree(
+  taskId: string,
+  prereqEdges: Map<string, string[]>,
+  progressMap: Map<string, TaskStatus>,
+  nameMap: Map<string, string>,
+): PrereqNode[]
+```
+
+<ParamField path="taskId" type="string">
+  The task to build tree for
+</ParamField>
+
+<ParamField path="prereqEdges" type="Map<string, string[]>">
+  Prerequisite graph
+</ParamField>
+
+<ParamField path="progressMap" type="Map<string, TaskStatus>">
+  Current progress
+</ParamField>
+
+<ParamField path="nameMap" type="Map<string, string>">
+  taskId → display name lookup
+</ParamField>
+
+**Example:**
+
+```typescript
+import { buildPrereqTree } from '@/domain/prereqTree';
+
+const tree = buildPrereqTree(taskId, prereqEdges, progressMap, nameMap);
+
+function renderTree(nodes: PrereqNode[], depth = 0) {
+  nodes.forEach(node => {
+    console.log('  '.repeat(depth) + `${node.name} [${node.status}]`);
+    renderTree(node.children, depth + 1);
+  });
+}
+
+renderTree(tree);
+```
+
+---
+
+## nextUnlock.ts
+
+Finds tasks unlocking soon (level-locked but prereqs met).
+
+### getNextUnlocks
+
+Returns tasks unlocking within a level range.
+
+```typescript
+interface NextUnlockGroup {
+  level: number;
+  tasks: QuestModel[];
+}
+
+function getNextUnlocks(
+  quests: QuestModel[],
+  playerLevel: number,
+  progressMap: Map<string, TaskStatus>,
+  levelRange = 5,
+): NextUnlockGroup[]
+```
+
+<ParamField path="levelRange" type="number" default="5">
+  How many levels ahead to check
+</ParamField>
+
+**Example:**
+
+```typescript
+import { getNextUnlocks } from '@/domain/nextUnlock';
+
+const upcoming = getNextUnlocks(quests, playerLevel, progressMap, 5);
+
+upcoming.forEach(group => {
+  console.log(`Level ${group.level}: ${group.tasks.length} tasks`);
+  group.tasks.forEach(t => console.log(`  - ${t.name}`));
+});
+```
+
+---
+
+## hideoutUnlock.ts
+
+Hideout station build state and unlock logic.
+
+### isLevelBuildable
+
+Checks if a hideout level can be built.
+
+```typescript
+function isLevelBuildable(
+  level: HideoutLevelModel,
+  builtLevelIds: Set<string>,
+  hideout: NormalizedHideout,
+): boolean
+```
+
+**Build Conditions:**
+1. Previous level of same station is built
+2. All `stationLevelRequirements` are built
+
+<Note>
+Item, skill, and trader requirements are **not** checked—they are display-only.
+</Note>
+
+---
+
+### getHideoutBuildState
+
+Returns build state for a specific level.
+
+```typescript
+type HideoutBuildState = 'built' | 'buildable' | 'locked';
+
+function getHideoutBuildState(
+  level: HideoutLevelModel,
+  builtLevelIds: Set<string>,
+  hideout: NormalizedHideout,
+): HideoutBuildState
+```
+
+---
+
+### getStationCurrentLevel
+
+Returns the highest built level for a station (0 = not built).
+
+```typescript
+function getStationCurrentLevel(
+  station: HideoutStationModel,
+  builtLevelIds: Set<string>,
+): number
+```
+
+---
+
+### getNextBuildableLevel
+
+Returns the next level that can be built, or `null` if maxed.
+
+```typescript
+function getNextBuildableLevel(
+  station: HideoutStationModel,
+  builtLevelIds: Set<string>,
+): HideoutLevelModel | null
+```
+
+---
+
+### getStationBuildState
+
+Returns overall build state for a station.
+
+```typescript
+type StationBuildState = 'all_built' | 'has_buildable' | 'locked';
+
+function getStationBuildState(
+  station: HideoutStationModel,
+  builtLevelIds: Set<string>,
+  hideout: NormalizedHideout,
+): StationBuildState
+```
+
+---
+
+### calcHideoutProgress
+
+Calculates overall hideout completion.
+
+```typescript
+function calcHideoutProgress(
+  hideout: NormalizedHideout,
+  builtLevelIds: Set<string>,
+): { totalLevels: number; builtCount: number; percent: number }
+```
+
+**Example:**
+
+```typescript
+import { calcHideoutProgress } from '@/domain/hideoutUnlock';
+
+const progress = calcHideoutProgress(hideout, builtLevelIds);
+console.log(`Hideout: ${progress.builtCount}/${progress.totalLevels} (${progress.percent}%)`);
+```
+
+---
+
+## itemTier.ts
+
+Item filtering, sorting, and tier grouping.
+
+### Tier Configuration
+
+```typescript
+export const TIER_ORDER: PriceTier[] = ['S', 'A', 'B', 'C', 'D'];
+
+export interface TierConfig {
+  label: string;
+  color: string;
+  bgColor: string;
+  description: string;
+}
+```
+
+### buildTierConfig
+
+Builds tier configuration from custom thresholds.
+
+```typescript
+function buildTierConfig(thresholds: TierThresholds): Record<PriceTier, TierConfig>
+```
+
+---
+
+### filterItems
+
+Applies filters and sorting to items.
+
+```typescript
+interface ItemFilters {
+  search: string;
+  types: string[];
+  tiers: PriceTier[];
+  taskRelations: TaskRelation[];
+  kappaTaskIds?: Set<string>;
+  collectorTaskId?: string | null;
+  sortBy: 'pricePerSlot' | 'bestSellPrice' | 'name';
+  sortDir: 'asc' | 'desc';
+}
+
+function filterItems(items: ItemModel[], filters: ItemFilters): ItemModel[]
+```
+
+**Task Relations:**
+- `'usedInKappaTask'`: Item is required for a Kappa task
+- `'rewardFromTask'`: Item is a task reward
+- `'collector'`: Item is needed for Collector quest
+
+---
+
+### groupByTier
+
+Groups items by price tier.
+
+```typescript
+function groupByTier(items: ItemModel[]): Map<PriceTier, ItemModel[]>
+```
+
+**Example:**
+
+```typescript
+import { filterItems, groupByTier, TIER_ORDER } from '@/domain/itemTier';
+
+const filtered = filterItems(items, filters);
+const grouped = groupByTier(filtered);
+
+TIER_ORDER.forEach(tier => {
+  const tierItems = grouped.get(tier)!;
+  console.log(`${tier} Tier: ${tierItems.length} items`);
+});
+```

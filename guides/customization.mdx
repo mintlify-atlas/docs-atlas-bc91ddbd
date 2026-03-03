@@ -1,0 +1,241 @@
+---
+title: Customization
+description: Personalize your Tarkov Kappa Navi experience with player settings, tier thresholds, language options, and display preferences
+---
+
+## Player level management
+
+Your player level determines which quests are available to you.
+
+### Setting your level
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to Settings → Player section.
+  </Step>
+  
+  <Step title="Adjust level">
+    Use the level input to set your current player level (1-79).
+  </Step>
+  
+  <Step title="Auto-save">
+    Changes are saved automatically to your local database.
+  </Step>
+</Steps>
+
+<Note>
+Changing your level will update which quests appear as "Unlocked" vs "Locked" based on level requirements.
+</Note>
+
+### Auto-start unlocked tasks
+
+Enable or disable automatic status changes for newly unlocked tasks:
+
+- **Enabled** (default): When you complete a task, any newly unlocked tasks automatically change from "not started" to "in progress"
+- **Disabled**: You must manually start tasks
+
+<Tip>
+Auto-start is useful for keeping your task list organized, automatically highlighting what you can do next.
+</Tip>
+
+## Item tier customization
+
+Tarkov Kappa Navi ranks items by Flea Market value using tier thresholds (S/A/B/C/D).
+
+### Default thresholds
+
+| Tier | Default Value |
+|------|---------------|
+| S    | 100,000₽      |
+| A    | 50,000₽       |
+| B    | 20,000₽       |
+| C    | 10,000₽       |
+| D    | < 10,000₽     |
+
+### Customizing tier thresholds
+
+<Steps>
+  <Step title="Navigate to item list">
+    Go to any page displaying items with tier labels (e.g., quest objectives, hideout requirements).
+  </Step>
+  
+  <Step title="Open tier settings">
+    Click the **tier customization** icon or button.
+  </Step>
+  
+  <Step title="Adjust values">
+    Enter new thresholds in rubles for S, A, B, and C tiers.
+  </Step>
+  
+  <Step title="Save changes">
+    Click **Save** to apply your custom thresholds.
+  </Step>
+</Steps>
+
+<Note>
+Tier thresholds are stored in browser localStorage under the key `tarkov-kappa-tier-thresholds` and persist across sessions.
+</Note>
+
+<Tip>
+Adjust thresholds based on current wipe economy. Early wipe, you might lower thresholds; late wipe, increase them.
+</Tip>
+
+### Resetting tier thresholds
+
+To restore default values:
+
+<Steps>
+  <Step title="Open tier settings">
+    Access the tier customization dialog.
+  </Step>
+  
+  <Step title="Click Reset">
+    Click **Reset to Defaults** to restore original thresholds.
+  </Step>
+</Steps>
+
+## Language switching
+
+Tarkov Kappa Navi supports Japanese and English.
+
+### Changing language
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to Settings → Player section.
+  </Step>
+  
+  <Step title="Select language">
+    Click **日本語** for Japanese or **English** for English.
+  </Step>
+  
+  <Step title="Apply immediately">
+    The interface updates instantly without page reload.
+  </Step>
+</Steps>
+
+<Note>
+Language preference is stored in your profile (`lang: 'ja' | 'en'`) and synced to IndexedDB.
+</Note>
+
+### What's translated
+
+- UI labels and buttons
+- Quest and item names (if available in game data)
+- System messages and notifications
+- Settings descriptions
+- Recommendation reasons
+
+<Tip>
+If some quest or item names appear in English even when Japanese is selected, it means the game data only provides English translations.
+</Tip>
+
+## Display preferences
+
+### Compact view modes
+
+Some pages offer compact view toggles to reduce screen space:
+
+- **Quest lists**: Toggle between card view and compact row view
+- **Item tables**: Collapse/expand item details
+- **Map markers**: Show/hide labels
+
+<Note>
+View mode preferences are typically stored per-page or per-component and may reset when you clear browser data.
+</Note>
+
+## Pinning tasks to "Now"
+
+The **Now** panel is a dedicated workspace for up to 3 high-priority tasks.
+
+### Adding a task to Now
+
+<Steps>
+  <Step title="Find the task">
+    Navigate to the task you want to prioritize.
+  </Step>
+  
+  <Step title="Pin it">
+    Click the **Pin to Now** button or icon.
+  </Step>
+  
+  <Step title="Access from Now panel">
+    View your pinned tasks in the dedicated Now panel (typically on the home page).
+  </Step>
+</Steps>
+
+### Removing a task from Now
+
+<Steps>
+  <Step title="Open Now panel">
+    Navigate to the Now panel.
+  </Step>
+  
+  <Step title="Unpin task">
+    Click the **unpin** or **remove** icon on the task.
+  </Step>
+</Steps>
+
+<Warning>
+You can only pin up to **3 tasks** at a time. To pin a new task when full, remove one first.
+</Warning>
+
+### Now pins in data
+
+Now pins are:
+- Stored in the `nowPins` table in IndexedDB
+- Included in JSON exports
+- Shared via QR codes
+- Preserved across browser sessions
+
+<Tip>
+Use Now pins for tasks you want to focus on during your next raid, like "Kill 10 PMCs on Customs" or "Find the Bronze Pocket Watch."
+</Tip>
+
+## Wipe ID customization
+
+The **Wipe ID** is a user-defined label to organize data across different game wipes.
+
+### Setting a Wipe ID
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to Settings → Player section.
+  </Step>
+  
+  <Step title="Enter Wipe ID">
+    Type a custom Wipe ID (up to 50 characters), e.g., `Jan2025` or `0.15.2`.
+  </Step>
+  
+  <Step title="Auto-save">
+    Changes are saved automatically with a 300ms debounce.
+  </Step>
+</Steps>
+
+<Note>
+Changing the Wipe ID does **not** reset your progress or clear data. It's purely an organizational label. Use the Danger Zone reset to actually clear progress.
+</Note>
+
+### Wipe ID usage
+
+- Separates map pins by wipe (`mapId + wipeId + viewMode` index)
+- Included in progress shares and exports
+- Helps distinguish backups from different game versions
+
+## Onboarding guide
+
+First-time users see a welcome guide. To replay it:
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to Settings → Welcome Guide section.
+  </Step>
+  
+  <Step title="Reset onboarding">
+    Click **Show Welcome Guide** to reset the `onboardingDone` flag.
+  </Step>
+  
+  <Step title="Refresh or navigate">
+    The guide will appear on your next visit to the home page.
+  </Step>
+</Steps>

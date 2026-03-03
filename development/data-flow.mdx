@@ -1,0 +1,335 @@
+---
+title: Data Flow
+description: How data flows through Tarkov Kappa Navi from API fetch to user action, including caching strategy, state updates, and unlock calculations
+---
+
+This page traces how data moves through the application across different scenarios.
+
+## API Data Fetching and Caching
+
+### Initial Page Load
+
+1. **App initialization** (`src/App.tsx:39`)
+   - `QueryClientProvider` wraps the app with TanStack Query
+   - React Router mounts the active page component
+
+2. **Component mounts and triggers query**
+   - Example: Dashboard calls `useTasks()` hook
+   - Hook location: `src/api/hooks.ts:33`
+
+3. **Query execution**
+   ```typescript
+   export function useTasks() {
+     const lang = useLang();
+     return useQuery<NormalizedTasks>({
+       queryKey: ['tasks', lang],
+       queryFn: async () => {
+         const data = await gqlFetch<TasksResponse>(tasksQuery(lang));
+         return normalizeTasks(data.tasks);
+       },
+       staleTime: TWELVE_HOURS,
+       gcTime: Infinity,
+     });
+   }
+   ```
+
+4. **GraphQL fetch** (`src/api/graphql.ts:3`)
+   - `POST https://api.tarkov.dev/graphql`
+   - Error handling for network/GraphQL errors
+
+5. **Normalization**
+   - Raw API response → flattened application models
+   - Example: `normalizeTasks()` builds dependency graph and extracts objective maps
+
+6. **Memory cache**
+   - TanStack Query stores result keyed by `['tasks', lang]`
+   - Data is marked fresh for 12 hours
+   - `gcTime: Infinity` prevents eviction
+
+### Subsequent Renders
+
+- Same component calls `useTasks()` again
+- TanStack Query returns cached data instantly (no re-fetch)
+- If data is stale (>12h), Query refetches in background and updates UI on completion
+
+### Cache Invalidation
+
+**Manual refresh** (Settings page):
+```typescript
+queryClient.invalidateQueries({ queryKey: ['tasks'] });
+```
+Forces immediate refetch on next `useTasks()` call.
+
+<Note>
+  API data is **never** invalidated automatically. Users must manually refresh cache if they want to pull latest upstream changes (e.g., new quests after a game patch).
+</Note>
+
+## User Action → State Update → Persistence Flow
+
+### Example: Completing a Task
+
+1. **User clicks "Mark as Done"** in task detail panel
+
+2. **Component calls domain function**
+   ```typescript
+   import { updateProgress } from '../db/progress';
+   
+   const handleComplete = async () => {
+     await updateProgress(taskId, 'done');
+   };
+   ```
+
+3. **Dexie write operation**
+   ```typescript
+   export async function updateProgress(taskId: string, status: TaskStatus) {
+     await db.progress.put({ taskId, status });
+     await db.logs.add({ taskId, status, at: Date.now() });
+   }
+   ```
+
+4. **IndexedDB transaction**
+   - Dexie executes atomic write
+   - Returns immediately (synchronous from caller perspective)
+
+5. **UI update**
+   - Component re-renders with new data from `useProgress()` hook
+   - Task badge changes to "Done"
+   - Kappa progress bar updates
+   - Recommendation scores recalculate (dependent tasks may now unlock)
+
+### Example: Adding a Map Pin
+
+1. **User clicks map to place pin**
+2. **Map component calls:**
+   ```typescript
+   import { addMapPin } from '../db/mapPins';
+   
+   const handlePinAdd = async (x: number, y: number) => {
+     const pin = {
+       id: crypto.randomUUID(),
+       mapId,
+       wipeId,
+       viewMode: '2D',
+       x,
+       y,
+       label: '',
+     };
+     await addMapPin(pin);
+   };
+   ```
+3. **Dexie writes to `mapPins` table**
+4. **UI shows new pin immediately** (optimistic update via React state)
+
+## Lock/Unlock Calculation Flow
+
+Task lock state is **never stored** — it's computed on every render.
+
+### Flow
+
+1. **Component needs lock state** (e.g., TaskCard rendering)
+
+2. **Fetch dependencies**
+   ```typescript
+   const { data: tasks } = useTasks();
+   const { data: profile } = useProfile();
+   const { data: progressRows } = useProgress();
+   ```
+
+3. **Build progress map**
+   ```typescript
+   const progressMap = new Map(
+     progressRows.map(row => [row.taskId, row.status])
+   );
+   ```
+
+4. **Call unlock function** (`src/domain/unlock.ts:11`)
+   ```typescript
+   const isUnlocked = isTaskUnlocked(task, profile.level, progressMap);
+   ```
+
+5. **Unlock logic executes**
+   - Check `profile.level >= task.minPlayerLevel`
+   - Check all `task.prereqIds` are `"done"` in `progressMap`
+   - Return `true` only if both conditions pass
+
+6. **UI renders lock badge/icon** based on result
+
+### Why Dynamic Calculation?
+
+- **Simplicity**: No cache invalidation needed
+- **Correctness**: Always reflects current player level + progress
+- **Performance**: Unlock check is O(n) where n = # of prerequisites (typically 0-3)
+
+<Note>
+  For ~200 quests, full unlock state calculation takes less than 1ms. The simplicity tradeoff is worth more than premature caching optimization.
+</Note>
+
+## Recommendation Scoring Pipeline
+
+The Dashboard "Recommended Tasks" panel runs a multi-stage scoring pipeline.
+
+### Pipeline Steps
+
+1. **Filter to candidates** (`src/domain/recommendations.ts:105`)
+   ```typescript
+   const candidates = quests.filter((q) => {
+     const status = progressMap.get(q.id) ?? 'not_started';
+     if (status === 'done') return false;
+     return isTaskUnlocked(q, playerLevel, progressMap);
+   });
+   ```
+
+2. **Build reverse dependency graph**
+   - Input: `prereqEdges` (taskId → prerequisite IDs[])
+   - Output: `reverseDeps` (taskId → dependent task IDs[])
+
+3. **For each candidate, compute scores:**
+
+   **a. Downstream impact** (`domain/recommendations.ts:49`)
+   ```typescript
+   const downstreamCount = countDownstreamTasks(
+     q.id,
+     reverseDeps,
+     progressMap,
+     kappaTaskIds
+   );
+   ```
+   - BFS traversal from task through reverse deps
+   - Counts only incomplete Kappa-required tasks
+   - Example: Completing "Debut" unlocks 15 downstream Kappa tasks → score 15
+
+   **b. Map batch count**
+   ```typescript
+   const mapIds = getTaskMapIds(q); // task.mapId + objective maps
+   let mapBatchCount = 0;
+   for (const mapId of mapIds) {
+     const others = (mapTaskCounts.get(mapId) ?? 0) - 1;
+     if (others > mapBatchCount) mapBatchCount = others;
+   }
+   ```
+   - Counts other unlocked Kappa tasks on the same map
+   - Example: If 4 other Customs tasks are available → score 4
+
+   **c. Kappa requirement**
+   ```typescript
+   const isKappaRequired = q.kappaRequired;
+   ```
+
+4. **Normalize and weight**
+   ```typescript
+   const maxDownstream = Math.max(...recs.map(r => r.downstreamCount), 1);
+   const maxMapBatch = Math.max(...recs.map(r => r.mapBatchCount), 1);
+
+   for (const rec of recs) {
+     const downstreamNorm = rec.downstreamCount / maxDownstream;
+     const mapBatchNorm = rec.mapBatchCount / maxMapBatch;
+     const kappaNorm = rec.isKappaRequired ? 1 : 0;
+
+     rec.compositeScore =
+       downstreamNorm * 0.5 + mapBatchNorm * 0.3 + kappaNorm * 0.2;
+   }
+   ```
+
+5. **Sort by composite score descending**
+
+6. **Return top 5 tasks**
+
+### Example Calculation
+
+| Task | Downstream | Map Batch | Kappa? | Normalized Score | Composite |
+|------|------------|-----------|--------|------------------|----------|
+| Debut | 15 | 3 | Yes | (1.0 × 0.5) + (0.6 × 0.3) + (1.0 × 0.2) | **0.88** |
+| Cargo X Pt.2 | 0 | 5 | Yes | (0 × 0.5) + (1.0 × 0.3) + (1.0 × 0.2) | **0.50** |
+| Fishing Gear | 8 | 1 | No | (0.53 × 0.5) + (0.2 × 0.3) + (0 × 0.2) | **0.33** |
+
+## Real-Time vs Cached Data Decisions
+
+### Always Real-Time (Never Cached)
+
+- **Task unlock state**: Depends on current level + progress
+- **Kappa progress %**: Aggregates live progress data
+- **Recommendation scores**: Requires live dependency graph
+- **Hideout buildable state**: Depends on item inventory counts
+
+### Cached (Memory)
+
+- **Quest metadata**: Names, objectives, prerequisites (from API)
+- **Map images**: URLs to 2D/3D map images
+- **Item prices**: Flea market price per slot (from API)
+- **Trader data**: Trader names, images
+
+### Persisted (IndexedDB)
+
+- **Task completion status**: User progress
+- **Player level**: User profile
+- **Map pins**: User-placed pins with labels
+- **Notes**: Per-task text notes
+- **Hideout progress**: Construction state
+- **Item inventory**: Owned item counts
+
+## Error Handling Flows
+
+### Network Error During Initial Load
+
+1. Query enters **loading** state
+2. After 2 retries (configurable), Query enters **error** state
+3. Component shows error UI: "Failed to fetch tasks. Check connection."
+4. User can click "Retry" → triggers `queryClient.refetchQueries()`
+
+### Network Error After Cache Populated
+
+1. Query attempts background refetch
+2. Fetch fails after retries
+3. Query keeps **existing cached data** and marks as stale
+4. User sees last successful data (potentially 12h+ old)
+5. Small "offline" indicator shows in UI
+
+### IndexedDB Write Failure
+
+1. Dexie throws error (e.g., storage quota exceeded)
+2. Component catches error and shows toast notification
+3. Data is **not** optimistically updated (no partial state)
+4. User can free space and retry action
+
+<Note>
+  IndexedDB failures are rare but catastrophic. The app shows a persistent warning banner if IndexedDB is unavailable (e.g., private browsing mode in some browsers).
+</Note>
+
+## Performance Optimizations
+
+### Query Key Granularity
+
+```typescript
+queryKey: ['tasks', lang]  // Separate cache per language
+```
+- Prevents unnecessary re-fetches when language toggle occurs
+- English and Japanese task names coexist in cache
+
+### Dexie Compound Indexes
+
+```typescript
+mapPins: 'id, [mapId+wipeId+viewMode]'
+```
+- Fast lookup: "Get all pins for Customs + wipe123 + 2D view"
+- Avoids full table scan on map render
+
+### Memoized Domain Functions
+
+Components use `useMemo` to avoid re-running expensive calculations:
+
+```typescript
+const recommendations = useMemo(
+  () => getRecommendations(quests, prereqEdges, progressMap, playerLevel, mapNames),
+  [quests, prereqEdges, progressMap, playerLevel, mapNames]
+);
+```
+
+### Lazy Route Loading
+
+React Router 7 code-splits routes:
+
+```typescript
+<Route path="/map" element={<MapPage />} />
+```
+
+Map page (largest bundle) only loads when user navigates to it.

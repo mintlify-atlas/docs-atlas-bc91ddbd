@@ -1,0 +1,337 @@
+---
+title: Hideout management
+description: Track station upgrades, manage item requirements, and plan your hideout progression
+---
+
+The Hideout Management page helps you track your hideout station upgrades, manage the items needed for construction, and plan your building progression efficiently.
+
+## Hideout overview
+
+At the top of the page, you'll see:
+
+**Overall progress bar**
+- Shows what percentage of all hideout levels are built
+- Updates in real-time as you mark stations complete
+
+**Summary stats**
+- Total built levels vs. total available levels
+- Completion percentage
+
+## Station grid
+
+The main view displays all hideout stations as cards in a grid layout. Each card shows:
+
+**Station name**
+- Generator, Security, Lavatory, Stash, etc.
+
+**Current level**
+- Your progress (e.g., "Level 2/3")
+
+**Build state indicator**
+- Visual color-coding showing station status
+
+**Next level preview**
+- Quick glance at the next upgrade if available
+
+### Build state colors
+
+Stations are sorted and color-coded by their state:
+
+**Has buildable levels (high priority)**
+- Stations where you can build the next level right now
+- All prerequisites are met
+- You can mark it as built
+
+**Locked (medium priority)**
+- Stations with unbuilt levels
+- Prerequisites are not yet complete
+- Need more progression before building
+
+**All built (low priority)**
+- Stations where all levels are complete
+- Sorted to the bottom of the list
+
+<Tip>
+The grid automatically sorts stations with buildable levels to the top, making it easy to see what you can upgrade next.
+</Tip>
+
+## Station detail panel
+
+Click any station card to open the detail panel on the right (or bottom sheet on mobile).
+
+### Station information
+
+**Level list**
+- All available levels for this station
+- Checkmarks for built levels
+- Current level highlighted
+
+**Build status**
+- Whether the level is built, buildable, or locked
+
+### Building requirements
+
+For each level, you'll see:
+
+**Station prerequisites**
+- Other hideout levels that must be built first
+- Example: "Generator Level 1 required"
+
+**Skill requirements**
+- Player skills that must be leveled
+- Example: "Strength Level 2 required"
+
+**Trader requirements**
+- Trader loyalty levels needed
+- Example: "Therapist LL2 required"
+
+**Item requirements**
+- All items needed to construct this level
+- Item icons, names, and quantities
+- Inventory tracking for each item
+
+### Marking stations as built
+
+When you've built a station level in-game:
+
+1. Open the station detail panel
+2. Find the level you completed
+3. Click the "Mark as Built" button
+4. The level is marked complete and progress updates immediately
+
+<Note>
+You can only mark levels as built if all prerequisite levels are already marked complete. The app enforces proper progression order.
+</Note>
+
+## Item requirement tracking
+
+Each station level's item requirements include an inventory counter:
+
+### Counter controls
+
+**Plus (+) button**
+- Increment your owned count by 1
+- Or by 100/1000 for items needed in bulk
+
+**Minus (-) button**
+- Decrement your owned count
+- Disabled when count is 0
+
+**Current count display**
+- Shows how many you own vs. how many you need
+- Example: "5/10"
+
+**MAX button**
+- Instantly set owned count to the required amount
+- Marks this item as fully collected
+
+**MIN button**
+- Reset owned count to 0
+- Clears your inventory for this item
+
+<Tip>
+The counter automatically increments by larger steps (100 or 1000) for items needed in bulk, like building materials.
+</Tip>
+
+### Visual indicators
+
+Items you've fully collected (owned ≥ required) are highlighted in green, making it easy to see which materials you still need to gather.
+
+## Filtering options
+
+The Hideout page offers three filter modes to help you focus:
+
+### Buildable filter
+
+Shows only stations with at least one level that:
+- Is not yet built
+- Has all prerequisites met
+- Can be constructed right now
+
+**Use this filter to:**
+- Focus on immediate upgrade opportunities
+- Quickly build all available levels
+- Maximize hideout progression
+
+### Not built filter
+
+Shows only stations that have unbuilt levels, regardless of whether they're currently buildable.
+
+**Use this filter to:**
+- See all remaining work
+- Plan future upgrades
+- Review what items you'll eventually need
+
+### All stations filter
+
+Shows every station, including fully built ones.
+
+**Use this filter to:**
+- Get a complete overview
+- Review all station levels
+- Check completed builds
+
+## Compact view mode
+
+Toggle "Compact" mode to change the station grid display:
+
+**Normal mode:**
+- Larger cards with more details
+- Better for reviewing individual stations
+- Easier to read at a glance
+
+**Compact mode:**
+- Smaller cards with condensed info
+- Fits more stations on screen
+- Faster scanning of many stations
+
+<Note>
+Your view mode preference (compact vs. normal) is saved and restored on your next visit.
+</Note>
+
+## Summary tab
+
+Switch to the Summary tab to see a consolidated view of all item requirements across your entire hideout.
+
+### Item grouping
+
+The Summary tab groups items across all stations and levels, showing:
+
+**Item name and icon**
+
+**Total quantity needed**
+- Sum of all requirements for this item across all unbuilt levels
+
+**Your inventory count**
+- How many you've marked as owned
+
+**Which stations need it**
+- List of all levels requiring this item
+- Format: "Station Lv# (allocated/required)"
+
+### Bulk inventory controls
+
+The Summary tab provides special controls for managing items used across multiple levels:
+
+**Smart +/- buttons**
+- Automatically allocate items to the first station that needs them
+- When incrementing, fills stations in order
+- When decrementing, removes from the last station first
+
+**MAX button**
+- Allocates the full required count to all stations
+- Marks all requirements for this item as fulfilled
+
+**MIN button**
+- Clears all inventory for this item across all stations
+- Resets to 0
+
+<Tip>
+Use the Summary tab to efficiently manage items needed by multiple stations, like Wires, Nails, or Screws.
+</Tip>
+
+### Summary filters
+
+The Summary tab has its own filter bar:
+
+**Buildable items only**
+- Shows items needed for stations you can build right now
+
+**Not built items**
+- Shows items for any unbuilt levels
+
+**All items**
+- Shows every item requirement in the entire hideout
+
+**Compact toggle**
+- Switches between detailed view and compact grid
+- Compact shows just icons, counts, and controls
+- Normal shows full details with station breakdowns
+
+## Craft list
+
+The hideout page also provides access to a craft list showing:
+
+- All crafts available at your current station levels
+- Required materials for each craft
+- Output items and quantities
+- Craft duration
+
+<Note>
+The craft list automatically updates based on which station levels you've marked as built.
+</Note>
+
+## User workflows
+
+### Planning your next upgrade
+
+<Steps>
+  <Step title="Apply the Buildable filter">
+    See which stations are ready to build.
+  </Step>
+  <Step title="Click a buildable station">
+    Review the item requirements in the detail panel.
+  </Step>
+  <Step title="Update your inventory counts">
+    Use +/- controls to mark which items you've collected.
+  </Step>
+  <Step title="Gather remaining items">
+    Note which materials you still need to find.
+  </Step>
+  <Step title="Mark the level as built">
+    Once you've built it in-game, update the tracker.
+  </Step>
+</Steps>
+
+### Collecting materials efficiently
+
+<Steps>
+  <Step title="Switch to the Summary tab">
+    See all items needed across the hideout.
+  </Step>
+  <Step title="Sort by total quantity or use count">
+    Identify items used by multiple stations.
+  </Step>
+  <Step title="Focus on high-volume items first">
+    Prioritize collecting Wires, Nails, etc.
+  </Step>
+  <Step title="Update counts as you collect">
+    Use the smart +/- buttons to allocate items.
+  </Step>
+  <Step title="Watch fulfillment indicators">
+    Green highlights show items you've fully collected.
+  </Step>
+</Steps>
+
+### Long-term hideout planning
+
+<Steps>
+  <Step title="Use the Not Built filter">
+    See all remaining stations to upgrade.
+  </Step>
+  <Step title="Review station prerequisites">
+    Understand the dependency chain.
+  </Step>
+  <Step title="Identify bottleneck stations">
+    Find stations that unlock many others.
+  </Step>
+  <Step title="Check trader and skill requirements">
+    Plan your character progression accordingly.
+  </Step>
+  <Step title="Build a station priority list">
+    Focus on unlocking key crafts or bonuses.
+  </Step>
+</Steps>
+
+### Switching between List and Summary
+
+**Use the List tab when:**
+- You want to focus on one station at a time
+- You're actively building a specific upgrade
+- You need to see station-level details and prerequisites
+
+**Use the Summary tab when:**
+- You're managing overall item collection
+- You want to see cross-station material needs
+- You're planning shopping trips or flea market purchases
+- You need a high-level view of all requirements

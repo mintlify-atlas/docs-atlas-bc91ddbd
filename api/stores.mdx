@@ -1,0 +1,544 @@
+---
+title: Zustand Stores
+description: Global state management using Zustand for UI state and user preferences
+---
+
+Tarkov Kappa Navi uses [Zustand](https://zustand-demo.pmnd.rs/) for lightweight, hook-based state management. All stores are located in `src/stores/`.
+
+## Store Architecture
+
+Stores manage ephemeral UI state and user preferences. They do **not** persist data directly—persistence is handled by Dexie (see [Database Schema](/api/database-schema)).
+
+### State vs. Persistence
+
+- **Stores:** Reactive UI state, filters, selections, temporary settings
+- **Database:** User progress, notes, pins, permanent settings
+
+---
+
+## filterStore
+
+Manages task filtering state for the Tasks page.
+
+**Location:** `src/stores/filterStore.ts`
+
+### State Shape
+
+```typescript
+interface FilterState {
+  traders: string[];         // Selected trader IDs
+  maps: string[];            // Selected map IDs
+  types: string[];           // Selected objective types
+  statuses: TaskStatus[];    // Selected statuses
+  search: string;            // Search query
+  kappaOnly: boolean;        // Show only Kappa-required tasks
+}
+```
+
+### Actions
+
+<ParamField path="setTraders" type="(traders: string[]) => void">
+  Update selected traders filter
+</ParamField>
+
+<ParamField path="setMaps" type="(maps: string[]) => void">
+  Update selected maps filter
+</ParamField>
+
+<ParamField path="setTypes" type="(types: string[]) => void">
+  Update selected objective types filter
+</ParamField>
+
+<ParamField path="setStatuses" type="(statuses: TaskStatus[]) => void">
+  Update selected statuses filter
+</ParamField>
+
+<ParamField path="setSearch" type="(search: string) => void">
+  Update search query
+</ParamField>
+
+<ParamField path="setKappaOnly" type="(kappaOnly: boolean) => void">
+  Toggle Kappa-only filter
+</ParamField>
+
+<ParamField path="resetFilters" type="() => void">
+  Reset all filters to initial state
+</ParamField>
+
+### Usage
+
+```typescript
+import { useFilterStore } from '@/stores/filterStore';
+
+function TasksPage() {
+  const { traders, setTraders, resetFilters } = useFilterStore();
+  
+  return (
+    <div>
+      <button onClick={() => setTraders(['prapor', 'therapist'])}>
+        Filter by Prapor & Therapist
+      </button>
+      <button onClick={resetFilters}>Clear Filters</button>
+    </div>
+  );
+}
+```
+
+---
+
+## hideoutStore
+
+Manages hideout UI state including station selection and summary view settings.
+
+**Location:** `src/stores/hideoutStore.ts`
+
+### State Shape
+
+```typescript
+interface HideoutState {
+  selectedStationId: string | null;       // Currently selected station
+  mobileTab: 'list' | 'summary';         // Mobile view tab
+  summaryFilter: 'buildable' | 'not_built' | 'all';  // Summary filter
+  summaryCompact: boolean;               // Compact summary view
+}
+```
+
+### Actions
+
+<ParamField path="setSelectedStationId" type="(stationId: string | null) => void">
+  Set the currently selected hideout station
+</ParamField>
+
+<ParamField path="setMobileTab" type="(tab: 'list' | 'summary') => void">
+  Switch between list and summary tabs on mobile
+</ParamField>
+
+<ParamField path="setSummaryFilter" type="(filter: 'buildable' | 'not_built' | 'all') => void">
+  Filter summary view by build state
+</ParamField>
+
+<ParamField path="toggleSummaryCompact" type="() => void">
+  Toggle compact mode for summary view
+</ParamField>
+
+### Usage
+
+```typescript
+import { useHideoutStore } from '@/stores/hideoutStore';
+
+function HideoutPanel() {
+  const { selectedStationId, setSelectedStationId } = useHideoutStore();
+  
+  return (
+    <div>
+      {selectedStationId ? (
+        <StationDetail stationId={selectedStationId} />
+      ) : (
+        <p>Select a station</p>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## itemFilterStore
+
+Manages item filtering and sorting for the Items page.
+
+**Location:** `src/stores/itemFilterStore.ts`
+
+### State Shape
+
+```typescript
+type SortBy = 'pricePerSlot' | 'bestSellPrice' | 'name';
+type SortDir = 'asc' | 'desc';
+type ViewMode = 'tier' | 'grid';
+type TaskRelation = 'usedInKappaTask' | 'rewardFromTask' | 'collector';
+
+interface ItemFilterState {
+  search: string;
+  types: string[];              // Item types (weapon, mods, medical, etc.)
+  tiers: PriceTier[];          // S, A, B, C, D
+  taskRelations: TaskRelation[];
+  sortBy: SortBy;
+  sortDir: SortDir;
+  viewMode: ViewMode;
+}
+```
+
+### Actions
+
+<ParamField path="setSearch" type="(search: string) => void">
+  Update search query
+</ParamField>
+
+<ParamField path="setTypes" type="(types: string[]) => void">
+  Update selected item types filter
+</ParamField>
+
+<ParamField path="setTiers" type="(tiers: PriceTier[]) => void">
+  Update selected price tiers filter
+</ParamField>
+
+<ParamField path="setTaskRelations" type="(taskRelations: TaskRelation[]) => void">
+  Filter by task relationship (used in Kappa tasks, task rewards, Collector)
+</ParamField>
+
+<ParamField path="setSortBy" type="(sortBy: SortBy) => void">
+  Set sort field
+</ParamField>
+
+<ParamField path="toggleSortDir" type="() => void">
+  Toggle between ascending and descending sort
+</ParamField>
+
+<ParamField path="setViewMode" type="(viewMode: ViewMode) => void">
+  Switch between tier-grouped and grid view
+</ParamField>
+
+<ParamField path="resetFilters" type="() => void">
+  Reset all filters to defaults
+</ParamField>
+
+### Usage
+
+```typescript
+import { useItemFilterStore } from '@/stores/itemFilterStore';
+
+function ItemsPage() {
+  const { tiers, setTiers, sortBy, setSortBy } = useItemFilterStore();
+  
+  return (
+    <div>
+      <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+        <option value="pricePerSlot">Price per Slot</option>
+        <option value="bestSellPrice">Sell Price</option>
+        <option value="name">Name</option>
+      </select>
+    </div>
+  );
+}
+```
+
+---
+
+## nowPinsStore
+
+Manages the "Now" panel pinned tasks. State is optimistically updated and must be persisted to Dexie separately.
+
+**Location:** `src/stores/nowPinsStore.ts`
+
+### State Shape
+
+```typescript
+interface NowPinsState {
+  taskIds: string[];   // Max 10 pinned task IDs
+}
+```
+
+### Actions
+
+<ParamField path="hydrate" type="(taskIds: string[]) => void">
+  Load initial state from database
+</ParamField>
+
+<ParamField path="addPin" type="(taskId: string) => void">
+  Optimistically add a pin. Caller must persist to Dexie.
+  Maximum 10 pins. Ignores duplicates.
+</ParamField>
+
+<ParamField path="removePin" type="(taskId: string) => void">
+  Optimistically remove a pin. Caller must persist to Dexie.
+</ParamField>
+
+### Usage
+
+```typescript
+import { useNowPinsStore } from '@/stores/nowPinsStore';
+import { db } from '@/db/database';
+
+function NowPanel() {
+  const { taskIds, addPin, removePin } = useNowPinsStore();
+  
+  const handleAddPin = async (taskId: string) => {
+    // Optimistic update
+    addPin(taskId);
+    
+    // Persist to DB
+    const updatedIds = [...taskIds, taskId];
+    await db.nowPins.put({ id: 'me', taskIds: updatedIds });
+  };
+  
+  return <div>{/* Render pins */}</div>;
+}
+```
+
+<Warning>
+Actions are **optimistic only**. You must persist changes to Dexie's `nowPins` table yourself.
+</Warning>
+
+---
+
+## profileStore
+
+Manages current player profile state including level, wipe ID, and settings.
+
+**Location:** `src/stores/profileStore.ts`
+
+### State Shape
+
+```typescript
+interface ProfileState {
+  currentLevel: number;         // 1-79
+  wipeId: string;               // Current wipe identifier
+  autoStartUnlocked: boolean;   // Auto-start unlocked tasks
+  lang: 'ja' | 'en';            // UI language
+  onboardingDone: boolean;      // Onboarding completed
+}
+```
+
+### Actions
+
+<ParamField path="setLevel" type="(level: number) => void">
+  Update player level (clamped to 1-79)
+</ParamField>
+
+<ParamField path="setWipeId" type="(wipeId: string) => void">
+  Update wipe ID
+</ParamField>
+
+<ParamField path="setAutoStart" type="(enabled: boolean) => void">
+  Enable/disable auto-start for unlocked tasks
+</ParamField>
+
+<ParamField path="setLang" type="(lang: 'ja' | 'en') => void">
+  Change UI language
+</ParamField>
+
+<ParamField path="setOnboardingDone" type="(done: boolean) => void">
+  Mark onboarding as complete
+</ParamField>
+
+<ParamField path="hydrate" type="(level: number, wipeId: string, autoStartUnlocked?: boolean, lang?: 'ja' | 'en', onboardingDone?: boolean) => void">
+  Load profile from database
+</ParamField>
+
+### Usage
+
+```typescript
+import { useProfileStore } from '@/stores/profileStore';
+import { db } from '@/db/database';
+
+function ProfileSettings() {
+  const { currentLevel, setLevel } = useProfileStore();
+  
+  const handleLevelChange = async (newLevel: number) => {
+    setLevel(newLevel);
+    
+    // Persist to DB
+    await db.profile.update('me', {
+      currentLevel: newLevel,
+      updatedAt: Date.now()
+    });
+  };
+  
+  return <input type="number" value={currentLevel} onChange={e => handleLevelChange(+e.target.value)} />;
+}
+```
+
+---
+
+## selectionStore
+
+Manages the currently selected task for detail view.
+
+**Location:** `src/stores/selectionStore.ts`
+
+### State Shape
+
+```typescript
+interface SelectionState {
+  selectedTaskId: string | null;
+}
+```
+
+### Actions
+
+<ParamField path="setSelectedTaskId" type="(taskId: string | null) => void">
+  Set the currently selected task ID, or null to deselect
+</ParamField>
+
+### Usage
+
+```typescript
+import { useSelectionStore } from '@/stores/selectionStore';
+
+function TaskList({ tasks }) {
+  const { selectedTaskId, setSelectedTaskId } = useSelectionStore();
+  
+  return (
+    <div>
+      {tasks.map(task => (
+        <div
+          key={task.id}
+          className={selectedTaskId === task.id ? 'selected' : ''}
+          onClick={() => setSelectedTaskId(task.id)}
+        >
+          {task.name}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## tierStore
+
+Manages customizable price tier thresholds. **Persisted to localStorage** via Zustand's persist middleware.
+
+**Location:** `src/stores/tierStore.ts`
+
+### State Shape
+
+```typescript
+export interface TierThresholds {
+  S: number;  // Default: 100,000
+  A: number;  // Default: 50,000
+  B: number;  // Default: 20,000
+  C: number;  // Default: 10,000
+  // D tier is anything below C
+}
+
+interface TierState {
+  thresholds: TierThresholds;
+}
+```
+
+### Constants
+
+```typescript
+export const DEFAULT_TIER_THRESHOLDS: TierThresholds = {
+  S: 100_000,
+  A: 50_000,
+  B: 20_000,
+  C: 10_000,
+};
+```
+
+### Actions
+
+<ParamField path="setThresholds" type="(thresholds: TierThresholds) => void">
+  Update all tier thresholds
+</ParamField>
+
+<ParamField path="resetThresholds" type="() => void">
+  Reset to default thresholds
+</ParamField>
+
+### Hooks
+
+```typescript
+// Get current thresholds
+function useTierThresholds(): TierThresholds;
+```
+
+### Usage
+
+```typescript
+import { useTierStore, useTierThresholds, DEFAULT_TIER_THRESHOLDS } from '@/stores/tierStore';
+
+function TierSettings() {
+  const { thresholds, setThresholds, resetThresholds } = useTierStore();
+  const currentThresholds = useTierThresholds();
+  
+  return (
+    <div>
+      <label>
+        S Tier: ₽
+        <input
+          type="number"
+          value={thresholds.S}
+          onChange={e => setThresholds({ ...thresholds, S: +e.target.value })}
+        />
+      </label>
+      <button onClick={resetThresholds}>Reset to Defaults</button>
+    </div>
+  );
+}
+```
+
+<Note>
+This store uses Zustand's `persist` middleware with storage key `tarkov-kappa-tier-thresholds`.
+</Note>
+
+---
+
+## Best Practices
+
+### Hydration Pattern
+
+Load database state into stores on app initialization:
+
+```typescript
+import { db } from '@/db/database';
+import { useProfileStore } from '@/stores/profileStore';
+import { useNowPinsStore } from '@/stores/nowPinsStore';
+
+async function initializeApp() {
+  // Load profile
+  const profile = await db.profile.get('me');
+  if (profile) {
+    useProfileStore.getState().hydrate(
+      profile.currentLevel,
+      profile.wipeId,
+      profile.autoStartUnlocked,
+      profile.lang,
+      profile.onboardingDone
+    );
+  }
+  
+  // Load now pins
+  const pins = await db.nowPins.get('me');
+  if (pins) {
+    useNowPinsStore.getState().hydrate(pins.taskIds);
+  }
+}
+```
+
+### Optimistic Updates
+
+For better UX, update store state immediately and persist asynchronously:
+
+```typescript
+const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+  // 1. Update UI immediately (via React Query cache mutation)
+  queryClient.setQueryData(['progress'], old => {
+    // Update progress optimistically
+  });
+  
+  // 2. Persist to database
+  await db.progress.put({
+    taskId,
+    status: newStatus,
+    completedAt: newStatus === 'done' ? Date.now() : null,
+    updatedAt: Date.now()
+  });
+};
+```
+
+### Selector Pattern
+
+Use selectors to subscribe to specific state slices:
+
+```typescript
+// Bad: Re-renders on any filter change
+const filters = useFilterStore();
+
+// Good: Only re-renders when search changes
+const search = useFilterStore(state => state.search);
+const setSearch = useFilterStore(state => state.setSearch);
+```

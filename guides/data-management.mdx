@@ -1,0 +1,153 @@
+---
+title: Data management
+description: Understanding how your progress data is stored, exported, and managed locally in Tarkov Kappa Navi
+---
+
+## Storage architecture
+
+Tarkov Kappa Navi uses a **local-first** architecture. All your data is stored directly in your browser using **IndexedDB** (via the Dexie library), with no cloud synchronization or server dependency.
+
+### What data is stored
+
+Your browser stores the following data locally:
+
+- **Profile**: Player level, wipe ID, language preference, auto-start settings
+- **Quest progress**: Task status (not started, in progress, done) for all quests
+- **Progress logs**: Timestamped history of all status changes
+- **Notes**: Personal notes attached to specific tasks
+- **Now pins**: Up to 3 tasks pinned to your "Now" panel
+- **Hideout progress**: Built hideout station levels and item inventory
+- **Map pins**: Custom markers on interactive maps with colors, shapes, and labels
+- **Pin presets**: Saved collections of map pins for reuse
+
+<Note>
+All data persists across browser sessions. Your progress is preserved even when you close the tab or restart your browser.
+</Note>
+
+## Export and import
+
+### Exporting your data
+
+Create a backup of your entire progress:
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to the Settings page from the main navigation.
+  </Step>
+  
+  <Step title="Find Export/Import section">
+    Locate the "Export / Import" card.
+  </Step>
+  
+  <Step title="Download JSON file">
+    Click the **Export** button to download a `.json` file containing all your data.
+  </Step>
+</Steps>
+
+The exported file includes:
+- Profile settings (level, wipe ID)
+- All quest progress and status history
+- Task notes
+- Now pins
+- Hideout progress and inventory
+- Map pins and presets
+
+### Importing data
+
+Restore a backup or transfer progress to another browser:
+
+<Steps>
+  <Step title="Prepare JSON file">
+    Locate your previously exported `.json` backup file.
+  </Step>
+  
+  <Step title="Navigate to Settings">
+    Go to Settings → Export / Import section.
+  </Step>
+  
+  <Step title="Select and import">
+    Click **Import**, select your JSON file, and confirm.
+  </Step>
+</Steps>
+
+<Warning>
+Importing data will **overwrite** your current progress. Make sure to export your current data first if you want to keep it.
+</Warning>
+
+## Wipe reset
+
+When Escape from Tarkov releases a new wipe, you can reset your progress while preserving your settings:
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to the Settings page.
+  </Step>
+  
+  <Step title="Find Danger Zone">
+    Scroll to the **Danger Zone** section at the bottom.
+  </Step>
+  
+  <Step title="Reset progress">
+    Click the **Reset all progress** button and confirm the action.
+  </Step>
+</Steps>
+
+This will:
+- Reset all quest statuses to "not started"
+- Clear progress logs
+- Remove all notes
+- Clear Now pins
+- Reset hideout progress and inventory
+
+<Note>
+Your player level, language settings, and tier thresholds will be **preserved** after a wipe reset.
+</Note>
+
+## Browser storage limits
+
+IndexedDB storage limits vary by browser:
+
+| Browser | Typical Limit |
+|---------|---------------|
+| Chrome | ~60% of available disk space |
+| Firefox | ~50% of available disk space |
+| Safari | ~1 GB (may prompt user) |
+
+Tarkov Kappa Navi's data footprint is typically **under 5 MB** for a full playthrough, well below browser limits.
+
+<Tip>
+If you clear browser data or cookies, your IndexedDB data will also be deleted. Always keep an exported JSON backup.
+</Tip>
+
+## Backup best practices
+
+<Steps>
+  <Step title="Regular exports">
+    Export your data weekly or after major progress milestones.
+  </Step>
+  
+  <Step title="Pre-wipe backup">
+    Export your data before resetting for a new wipe, in case you need to reference old progress.
+  </Step>
+  
+  <Step title="Multiple locations">
+    Save backups to cloud storage (Google Drive, Dropbox) or external drives.
+  </Step>
+  
+  <Step title="Before browser changes">
+    Export data before switching browsers or clearing browser data.
+  </Step>
+</Steps>
+
+## Wipe ID system
+
+The **Wipe ID** field in Settings allows you to track which game wipe your data belongs to:
+
+- Default: `default`
+- Examples: `Jan2025`, `0.15.2`, `wipe-15`
+- Used to separate map pins and progress across different wipes
+- Change it in Settings → Player → Wipe ID
+
+<Note>
+Changing your Wipe ID does **not** reset your progress. It's purely an organizational label. Use the Danger Zone reset function to actually clear progress.
+</Note>

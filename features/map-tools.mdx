@@ -1,0 +1,388 @@
+---
+title: Map tools
+description: Interactive 2D and 3D maps with custom pins, labels, and shareable presets
+---
+
+The Map Tools page provides interactive maps of all Tarkov locations with customizable pin placement, labeling, and preset saving capabilities. Use it to mark quest objectives, loot spawns, extracts, or any location you need to remember.
+
+## Map viewing
+
+### Selecting a map
+
+At the top of the page, you'll see buttons for all available maps:
+- Customs
+- Woods
+- Shoreline
+- Reserve
+- Interchange
+- Factory
+- Lighthouse
+- Streets of Tarkov
+- Ground Zero
+- The Lab
+- And more
+
+Click any map button to load that location. Your last selected map is remembered and automatically loaded on your next visit.
+
+### 2D vs 3D view modes
+
+Most maps support both viewing modes:
+
+**2D view**
+- Flat, top-down map image
+- Cleaner, simpler layout
+- Faster performance
+- Better for precise pin placement
+
+**3D view**
+- Isometric/perspective map rendering
+- Detailed building interiors
+- Visual depth and landmarks
+- More immersive planning
+
+<Note>
+Some maps (like Factory) only have 2D images available. The 3D toggle is automatically disabled for these locations.
+</Note>
+
+Switch between modes using the 2D/3D toggle button on the map canvas.
+
+### Navigation controls
+
+**Pan**
+- Click and drag the map to move around
+- Touch and drag on mobile devices
+
+**Zoom**
+- Use the mouse wheel to zoom in/out
+- Pinch to zoom on touch devices
+- Zoom controls appear on the canvas
+
+**Reset view**
+- Click the reset button to return to the default zoom and position
+
+## Pin placement and editing
+
+### Creating a new pin
+
+<Steps>
+  <Step title="Click the Add button">
+    In the right panel (or bottom sheet on mobile), click "Add Pin".
+  </Step>
+  <Step title="Enter placement mode">
+    The cursor changes to indicate placement mode.
+  </Step>
+  <Step title="Click on the map">
+    Choose the exact location for your pin.
+  </Step>
+  <Step title="Configure the pin">
+    A dialog appears to set the label, color, and shape.
+  </Step>
+  <Step title="Save the pin">
+    Click Save to place the pin on the map.
+  </Step>
+</Steps>
+
+<Tip>
+You can cancel placement mode at any time by clicking the "Cancel" button or pressing Escape.
+</Tip>
+
+### Pin customization options
+
+**Label**
+- Text description for the pin
+- Supports multi-word labels with chip-based input (see Label System below)
+- Optional - pins can be unlabeled
+
+**Color**
+- Red
+- Blue
+- Yellow
+- Green
+- Purple
+- White
+
+**Shape**
+- Circle
+- Diamond
+- Square
+- Triangle
+- Star
+- Marker (location pin icon)
+
+### Editing existing pins
+
+To edit a pin:
+
+1. Click the pin on the map, or
+2. Click the settings icon next to the pin in the pin list panel
+
+The edit dialog appears with the current values. Modify any field and click Save.
+
+### Dragging pins
+
+You can reposition pins by clicking and dragging them directly on the map. The new position is saved automatically when you release the pin.
+
+### Deleting pins
+
+**From the map:**
+- Click the pin to open the edit dialog
+- Click the Delete button
+
+**From the pin list:**
+- Click the X icon next to the pin
+
+## Pin display settings
+
+The right panel (or bottom sheet on mobile) includes controls for adjusting how pins appear on the map:
+
+### Pin opacity
+
+Slider control from 0% to 100%:
+- Lower opacity makes pins less prominent
+- Higher opacity makes pins more visible
+- Default: 70%
+- Useful when pins overlap map details
+
+### Pin size
+
+Slider control from 8px to 32px:
+- Smaller pins reduce clutter
+- Larger pins are easier to see
+- Default: 22px
+- Adjust based on your screen size and zoom level
+
+### Show labels toggle
+
+Checkbox to show/hide pin labels:
+- **On** - Labels appear next to pins
+- **Off** - Only pin markers are visible
+- Useful for decluttering when you have many pins
+
+<Note>
+All pin display settings are saved per map and view mode (2D/3D), so you can have different preferences for each configuration.
+</Note>
+
+## Label system
+
+The label input uses a chip-based system for better organization:
+
+### How it works
+
+- Type your label text
+- Press Space, Enter, or comma to create a chip
+- Each word becomes a separate chip
+- Chips appear as colored tags in the input
+
+### Managing chips
+
+**Add chips:**
+- Type and press Space/Enter/comma
+- Paste multi-word text to create multiple chips
+
+**Remove chips:**
+- Click the X on any chip
+- Press Backspace when the input is empty to delete the last chip
+
+**Edit chips:**
+- Delete the chip and recreate it
+- Or clear all and retype
+
+### Label display
+
+On the map, chip-based labels appear as:
+- Individual words separated by spaces
+- Clean, readable text next to pins
+- Consistent formatting across all pins
+
+<Tip>
+Use the chip system to create structured labels like "Quest • Gunsmith • Part 6" or "Loot • Tech • GPU" for easier scanning.
+</Tip>
+
+## Pin presets
+
+Presets let you save and restore entire sets of pins, making it easy to switch between different layouts or share your pin configurations.
+
+### Saving a preset
+
+<Steps>
+  <Step title="Configure your pins">
+    Place and customize all the pins you want to save.
+  </Step>
+  <Step title="Open the Presets section">
+    Expand the "Presets" section in the pin panel.
+  </Step>
+  <Step title="Enter a preset name">
+    Type a descriptive name like "Quest Markers" or "Loot Routes".
+  </Step>
+  <Step title="Click Save Preset">
+    Your current pin layout is saved locally.
+  </Step>
+</Steps>
+
+Presets are saved per map and view mode (2D/3D).
+
+### Loading a preset
+
+<Steps>
+  <Step title="Open the Presets section">
+    Find the preset you want to load.
+  </Step>
+  <Step title="Click Apply">
+    Your current pins are replaced with the preset's pins.
+  </Step>
+</Steps>
+
+<Note>
+Applying a preset removes all current pins on the map and replaces them with the preset configuration.
+</Note>
+
+### Sharing presets
+
+Each saved preset has a "Share" button that generates a URL:
+
+1. Click the Share button next to a preset
+2. A URL is generated containing the preset data
+3. Copy the URL and send it to others
+4. Anyone with the URL can open it to automatically load those pins
+
+**URL structure:**
+- Contains the map ID
+- View mode (2D/3D)
+- Encoded pin data (positions, labels, colors, shapes)
+
+<Tip>
+Share preset URLs with your squad to coordinate strategies, mark loot routes, or plan quest runs together.
+</Tip>
+
+### Managing presets
+
+**Delete a preset:**
+- Click the delete icon next to the preset name
+- Confirm the deletion
+
+**Rename a preset:**
+- Delete the old preset
+- Save a new preset with the updated name
+
+## Right panel resizing
+
+On desktop, the pin list panel on the right side of the screen is resizable:
+
+- Hover over the left edge of the panel
+- The cursor changes to indicate the resize handle
+- Click and drag left or right to adjust the width
+- Release to set the new width
+
+**Width limits:**
+- Minimum: 180px
+- Maximum: 500px
+- Default: 280px
+
+Your chosen width is saved and restored on your next visit.
+
+## Mobile experience
+
+On mobile devices, the interface adapts:
+
+### Bottom sheets
+
+Instead of a side panel, map info and pin controls appear in bottom sheets:
+
+**Info button (i icon):**
+- Opens a sheet with map information
+- Name, wiki link, and details
+
+**Pins button (pin icon):**
+- Opens the pin list and controls
+- Pin display settings
+- Preset management
+
+### Floating action buttons (FABs)
+
+Two buttons float over the bottom-right corner:
+- **Info FAB** - Toggle map information
+- **Pins FAB** - Toggle pin panel
+
+Both highlight when their respective bottom sheet is open.
+
+## Use cases
+
+### Quest objective markers
+
+<Steps>
+  <Step title="Filter tasks by map">
+    On the Tasks page, filter by the map you're raiding.
+  </Step>
+  <Step title="Open the Map Tools page">
+    Switch to the map corresponding to your filtered tasks.
+  </Step>
+  <Step title="Mark quest locations">
+    Place pins at objective locations with labels like "Plant Item - Dorms 3F".
+  </Step>
+  <Step title="Color-code by task">
+    Use different colors for different quests or objective types.
+  </Step>
+  <Step title="Save as a preset">
+    Create a preset named after the quest chain.
+  </Step>
+</Steps>
+
+### Loot route planning
+
+<Steps>
+  <Step title="Research high-value spawns">
+    Identify loot locations you want to hit.
+  </Step>
+  <Step title="Place pins at each spawn">
+    Mark LEDX spawns, tech rooms, stashes, etc.
+  </Step>
+  <Step title="Label by item type">
+    Use labels like "GPU", "LEDX", "Stash", "Tech".
+  </Step>
+  <Step title="Color by priority">
+    Red for high value, yellow for medium, green for low.
+  </Step>
+  <Step title="Plan your route">
+    Visually trace an efficient path through pins.
+  </Step>
+  <Step title="Save the route as a preset">
+    Create presets for different loot strategies.
+  </Step>
+</Steps>
+
+### Extract planning
+
+<Steps>
+  <Step title="Identify all possible extracts">
+    Check which extracts are available for your spawn.
+  </Step>
+  <Step title="Pin extract locations">
+    Place pins at each extract point.
+  </Step>
+  <Step title="Label with requirements">
+    Note things like "No Backpack", "1000₽", "Scav Friendly".
+  </Step>
+  <Step title="Color by reliability">
+    Green for always-available, yellow for conditional.
+  </Step>
+</Steps>
+
+### Team coordination
+
+<Steps>
+  <Step title="Create a squad strategy">
+    Plan positions, routes, or objectives.
+  </Step>
+  <Step title="Pin key positions">
+    Mark sniper spots, cover locations, choke points.
+  </Step>
+  <Step title="Label with assignments">
+    "Player 1 Overwatch", "Flank Route", etc.
+  </Step>
+  <Step title="Save and share the preset">
+    Generate a URL and send it to your teammates.
+  </Step>
+  <Step title="Everyone loads the preset">
+    All squad members see the same pin layout.
+  </Step>
+</Steps>

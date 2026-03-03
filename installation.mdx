@@ -1,0 +1,250 @@
+---
+title: Installation
+description: Set up Tarkov Kappa Navi for local development
+---
+
+# Installation
+
+This guide covers setting up Tarkov Kappa Navi for local development. If you just want to use the application, see the [Quickstart](/quickstart) guide.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** >= 18
+- **npm** >= 9 (or equivalent package manager)
+
+You can verify your installations:
+
+```bash
+node --version
+npm --version
+```
+
+## Local development setup
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Tarkov Kappa Navi repository from GitHub:
+
+    ```bash
+    git clone https://github.com/marlho/TarkovKappaNavi.git
+    cd TarkovKappaNavi
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
+
+    This will install:
+    - React 18 and React DOM
+    - Vite 5 for development and building
+    - TanStack Query for server state management
+    - Dexie for IndexedDB operations
+    - Zustand for UI state management
+    - React Router for navigation
+    - All other dependencies and dev tools
+  </Step>
+
+  <Step title="Start the development server">
+    Run the development server with hot module replacement:
+
+    <CodeGroup>
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+
+      ```bash pnpm
+      pnpm dev
+      ```
+    </CodeGroup>
+
+    The application will be available at `http://localhost:5173` by default.
+
+    <Note>
+      Vite will automatically open your browser and provide hot reload during development.
+    </Note>
+  </Step>
+
+  <Step title="Verify the installation">
+    Open your browser to `http://localhost:5173` and verify:
+    
+    - The application loads without errors
+    - You can navigate between Dashboard, Tasks, Map, Hideout, Items, and Settings
+    - The browser console shows no critical errors
+    
+    On first load, the app will fetch game data from the tarkov.dev API and store it in memory cache.
+  </Step>
+</Steps>
+
+## Development commands
+
+The following npm scripts are available for development:
+
+### Start development server
+
+```bash
+npm run dev
+```
+
+Starts Vite development server with hot module replacement at `http://localhost:5173`.
+
+### Build for production
+
+```bash
+npm run build
+```
+
+Performs TypeScript compilation and builds optimized production assets to the `dist/` directory.
+
+### Preview production build
+
+```bash
+npm run preview
+```
+
+Serves the production build locally for testing before deployment.
+
+### Run linting
+
+```bash
+npm run lint
+```
+
+Runs ESLint to check code quality and style issues.
+
+### Run tests
+
+<CodeGroup>
+  ```bash Run once
+  npm run test
+  ```
+
+  ```bash Watch mode
+  npm run test:watch
+  ```
+</CodeGroup>
+
+Executes the test suite using Vitest. Watch mode automatically reruns tests when files change.
+
+## Project structure
+
+Understanding the codebase organization:
+
+```
+src/
+├── api/           # GraphQL API communication and React Query hooks
+├── components/    # UI components organized by feature
+│   ├── dashboard/ # Dashboard page with progress and recommendations
+│   ├── detail/    # Task detail panel component
+│   ├── hideout/   # Hideout station management
+│   ├── items/     # Item database and price tiers
+│   ├── layout/    # AppShell, Header, Sidebar components
+│   ├── map/       # Interactive map viewer with pin tools
+│   ├── settings/  # Settings page with data management
+│   ├── share/     # QR code sharing functionality
+│   ├── tasks/     # Task list and filtering
+│   └── ui/        # Reusable UI components
+├── data/          # Static data files
+├── db/            # Dexie database schema and CRUD operations
+├── domain/        # Domain logic (unlock calculation, Kappa progress, filters)
+├── hooks/         # Custom React hooks
+├── i18n/          # Internationalization (Japanese and English)
+├── lib/           # Utility functions (QR sharing, pin presets)
+└── stores/        # Zustand state stores
+```
+
+## Technology stack
+
+Key dependencies and their purposes:
+
+| Category | Technology | Purpose |
+|----------|------------|----------|
+| Framework | React 18 + TypeScript | Type-safe UI development |
+| Build | Vite 5 | Fast development server and optimized builds |
+| State Management | Zustand v5 | UI state management |
+| Server State | TanStack Query v5 | API data caching and synchronization |
+| Local Database | Dexie v4 | IndexedDB wrapper for user data persistence |
+| Validation | Zod v4 | Runtime type validation |
+| Routing | React Router v7 | Client-side navigation |
+| Styling | CSS Modules | Component-scoped styling |
+| Testing | Vitest | Unit and integration testing |
+| Linting | ESLint | Code quality enforcement |
+| Icons | Lucide React | Icon library |
+
+## Data sources
+
+The application fetches game data from the [tarkov.dev GraphQL API](https://tarkov.dev/), a community-run unofficial API for Escape from Tarkov game data.
+
+<Note>
+  API data is cached in memory with a 12-hour TTL. User progress data is stored separately in IndexedDB and persists across sessions.
+</Note>
+
+## Architecture overview
+
+Tarkov Kappa Navi uses a local-first architecture:
+
+```
+tarkov.dev GraphQL API
+        │
+        ▼
+  TanStack Query (memory cache, TTL 12h)
+        │
+        ▼
+  ┌─────────────────────────────────┐
+  │       React Components          │
+  │  (Dashboard / Tasks / Map / …)  │
+  └──────┬──────────────┬───────────┘
+         │              │
+    Zustand Store   Domain Logic
+    (UI state)      (unlock checks, filters,
+         │          Kappa progress, scoring)
+         │              │
+         ▼              ▼
+       Dexie v4 (IndexedDB)
+       ┌──────────────────┐
+       │ profile          │
+       │ progress         │
+       │ nowPins          │
+       │ notes / logs     │
+       │ hideoutProgress  │
+       │ mapPins          │
+       └──────────────────┘
+```
+
+### Key architectural decisions
+
+- **API data** is cached in memory only (TTL 12 hours, with fallback to stale cache)
+- **User data** is persisted to IndexedDB (profile, progress, notes, pins)
+- **Lock states** are computed dynamically (`playerLevel >= minPlayerLevel` and all prerequisite tasks complete)
+- **No backend** - entire application runs client-side in the browser
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn how to use the application
+  </Card>
+  
+  <Card title="Contributing" icon="code" href="https://github.com/marlho/TarkovKappaNavi">
+    Contribute to the project on GitHub
+  </Card>
+</CardGroup>

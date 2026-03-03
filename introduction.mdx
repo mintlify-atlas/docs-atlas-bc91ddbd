@@ -1,0 +1,127 @@
+---
+title: Introduction
+description: Track your journey to the Kappa container in Escape from Tarkov with a fully client-side quest progress tracker
+---
+
+# Tarkov Kappa Navi
+
+A quest progress tracker for *Escape from Tarkov* — track your journey to the Kappa container.
+
+Tarkov Kappa Navi is a fully client-side web application that helps you manage quest progress, plan hideout upgrades, organize map routes, and track items needed for your journey to the Kappa container. All data is stored locally in your browser's IndexedDB with no backend required.
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started tracking your first quest in minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Run the application locally for development
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/marlho/TarkovKappaNavi">
+    View the source code and contribute
+  </Card>
+</CardGroup>
+
+## What is Tarkov Kappa Navi?
+
+Tarkov Kappa Navi helps *Escape from Tarkov* players optimize their quest completion strategy and track progress toward obtaining the prestigious Kappa secure container. The application provides intelligent task recommendations, visual progress tracking, and comprehensive planning tools.
+
+<Note>
+  This project is not affiliated with or endorsed by Battlestate Games. Game content and materials are trademarks and copyrights of Battlestate Games.
+</Note>
+
+## Key features
+
+### Smart quest tracking
+
+- **Kappa progress visualization**: View overall progress and per-trader breakdowns with visual progress bars
+- **Intelligent recommendations**: Get task suggestions based on downstream impact scoring, map batching efficiency, and Kappa requirements
+- **Dependency management**: See prerequisite task trees and unlock upcoming tasks automatically
+- **Active task dashboard**: Pin up to 10 active tasks in the "Now" panel for quick access
+
+### Advanced task management
+
+- **Flexible filtering**: Filter tasks by trader, map, task type, and completion status
+- **Multiple view modes**: Switch between list view and flow view (dependency graph visualization)
+- **Bulk completion**: Complete tasks with their prerequisites in batch operations
+- **Custom notes**: Add personal notes to any task for strategy planning
+
+### Interactive map tools
+
+- **2D and 3D maps**: Browse all Tarkov maps with high-quality imagery
+- **Custom pins**: Place, edit, and drag pins to mark locations of interest
+- **Pin presets**: Save pin configurations and share them via URL
+- **Label system**: Use chip-based labels with custom preset support
+
+### Hideout management
+
+- **Station overview**: Track all hideout construction stations and upgrade requirements
+- **Item aggregation**: See cumulative item requirements across all stations
+- **Inventory tracking**: Manage owned quantities with +/- controls and MAX/MIN shortcuts
+- **Smart filtering**: View buildable stations, incomplete stations, or all stations
+- **Compact mode**: Toggle condensed view for easier scanning
+
+### Item database
+
+- **Price tier visualization**: Items categorized into S/A/B/C/D tiers based on value
+- **Customizable thresholds**: Adjust tier boundaries to match your playstyle
+
+### Data management
+
+- **JSON export/import**: Back up and restore your progress data
+- **QR code sharing**: Share progress with friends via QR codes with integrity validation
+- **Wipe reset**: Clear all progress when a new game wipe occurs
+- **API cache refresh**: Update game data from tarkov.dev
+
+## Local-first architecture
+
+<Note>
+  Tarkov Kappa Navi requires no backend server. All user data is stored in your browser's IndexedDB, ensuring complete privacy and offline capability.
+</Note>
+
+The application uses a modern local-first architecture:
+
+- **Game data** is fetched from the community-run [tarkov.dev GraphQL API](https://tarkov.dev/) and cached in memory with a 12-hour TTL
+- **User progress** (profile, quest completion, pins, notes, hideout status) is persisted to IndexedDB using Dexie v4
+- **Task unlock states** are computed dynamically based on player level and prerequisite completion
+- **No account required**: Start using the app immediately without sign-up
+
+## Application sections
+
+The app is organized into six main sections accessible from the sidebar:
+
+### Dashboard
+
+Your command center showing Kappa progress, pinned active tasks, recommended next tasks, and upcoming unlocks.
+
+### Tasks
+
+Complete task list with filtering, sorting, dependency visualization, and detailed task information panels.
+
+### Map
+
+Interactive 2D and 3D maps for all Tarkov locations with custom pin placement and preset sharing.
+
+### Hideout
+
+Station upgrade planner with item requirement tracking and inventory management.
+
+### Items
+
+Searchable item database with price tier categorization.
+
+### Settings
+
+Player level configuration, data import/export, QR code sharing, and wipe reset controls.
+
+## Technology stack
+
+Built with modern web technologies:
+
+- **React 18** with TypeScript for type-safe UI development
+- **Vite 5** for fast development and optimized builds
+- **Zustand v5** for UI state management
+- **TanStack Query v5** for server state caching
+- **Dexie v4** for IndexedDB persistence
+- **React Router v7** for navigation
+- **Zod v4** for data validation
+- **Vitest** for testing

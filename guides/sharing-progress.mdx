@@ -1,0 +1,203 @@
+---
+title: Sharing progress
+description: Learn how to share your quest progress and map pins with friends using QR codes and URLs
+---
+
+## Overview
+
+Tarkov Kappa Navi supports two sharing methods:
+
+1. **QR code-based progress sharing** — Share your entire quest progress, hideout, and map pins
+2. **URL-based pin preset sharing** — Share only map pins as reusable presets
+
+Both methods use compressed, encoded data URLs that work offline and require no server.
+
+## Progress sharing with QR codes
+
+### How it works
+
+Your progress data is:
+1. Serialized to a compact JSON format
+2. Compressed using deflate (pako)
+3. Encoded as base64url
+4. Embedded in a URL
+5. Rendered as a QR code for easy scanning
+
+<Note>
+QR codes can store up to **2,953 bytes** of data (version 40, low error correction). If your data exceeds this, the app will generate two QR codes: one for tasks, one for hideout/pins.
+</Note>
+
+### Generating a share QR code
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to Settings → QR Share section.
+  </Step>
+  
+  <Step title="Generate QR code">
+    Click **Generate QR Code** to create a shareable QR code.
+  </Step>
+  
+  <Step title="Share with friends">
+    Show the QR code to friends or send a screenshot.
+  </Step>
+</Steps>
+
+If your data is too large:
+- You'll see two QR codes labeled "QR ①" and "QR ②"
+- QR ① contains tasks and basic progress
+- QR ② contains hideout progress and map pins
+- Recipients must scan both to get complete data
+
+### Importing from a QR code
+
+<Steps>
+  <Step title="Open share page">
+    Navigate to the `/share` route (accessible from Settings or direct URL).
+  </Step>
+  
+  <Step title="Scan QR code">
+    Use your device camera or upload a QR code screenshot.
+  </Step>
+  
+  <Step title="Review data">
+    The app will display:
+    - Player level
+    - Wipe ID
+    - Number of completed tasks
+    - Number of in-progress tasks
+  </Step>
+  
+  <Step title="Import">
+    Click **Import** to merge or overwrite your current progress.
+  </Step>
+</Steps>
+
+<Warning>
+Importing progress will overwrite your current data. Export a backup first if you want to preserve your progress.
+</Warning>
+
+## What data is included
+
+A progress share QR code contains:
+
+- **Profile**: Player level (`currentLevel`), Wipe ID (`wipeId`)
+- **Quest progress**: Task status for all non-"not started" tasks
+  - `d` = done
+  - `i` = in progress
+- **Now pins**: Up to 3 task IDs pinned to the "Now" panel
+- **Hideout progress** (optional): Built station level IDs
+- **Map pins** (optional): Custom map markers with:
+  - Map ID and view mode (2D/3D)
+  - Label, color, shape
+  - X/Y coordinates (rounded to 1 decimal)
+
+<Tip>
+Only progress that differs from the default ("not started") is included, keeping the data compact.
+</Tip>
+
+## Data integrity checks
+
+When you import a QR code, the app validates:
+
+### Errors (import blocked)
+- Decode/decompression failures
+- Invalid data structure
+- Unsupported version number
+- Invalid player level (must be 1-79)
+- Empty or missing Wipe ID
+- Malformed progress data
+
+### Warnings (import allowed)
+- Unknown task status values
+- Malformed hideout or map pin data
+- Extra fields in the payload
+
+<Note>
+The app shows validation errors before import. If there are only warnings, you can choose to proceed or cancel.
+</Note>
+
+## Pin preset sharing
+
+Share **only map pins** as reusable presets, without quest progress.
+
+### Creating a pin preset URL
+
+<Steps>
+  <Step title="Open map viewer">
+    Navigate to the interactive map for any location.
+  </Step>
+  
+  <Step title="Create pins">
+    Add custom pins with labels, colors, and shapes.
+  </Step>
+  
+  <Step title="Save as preset">
+    Click **Save Preset**, give it a name, and save.
+  </Step>
+  
+  <Step title="Share URL">
+    Click **Share** on the preset to generate a URL like:
+    ```
+    https://example.com/map/preset?p=<encoded_data>
+    ```
+  </Step>
+</Steps>
+
+### Importing a pin preset
+
+When someone visits your preset URL:
+
+<Steps>
+  <Step title="Click the link">
+    Open the shared URL in your browser.
+  </Step>
+  
+  <Step title="Review pins">
+    The app displays the preset name and pin count.
+  </Step>
+  
+  <Step title="Import to map">
+    Click **Import** to add the pins to your current wipe's map.
+  </Step>
+</Steps>
+
+<Note>
+Pin presets only include map markers, not quest progress or hideout data.
+</Note>
+
+## URL structure
+
+### Progress share URL
+```
+https://<domain>/share?d=<base64url_encoded_data>
+```
+
+### Secondary share URL (hideout + pins)
+```
+https://<domain>/share?h=<base64url_encoded_data>
+```
+
+### Pin preset URL
+```
+https://<domain>/map/preset?p=<base64url_encoded_data>
+```
+
+<Tip>
+All sharing happens client-side. Your data is never uploaded to a server — it's embedded directly in the URL.
+</Tip>
+
+## Compression details
+
+Data is compressed to fit QR code limits:
+
+- **Status codes**: `d` (done), `i` (in progress)
+- **Colors**: `r` (red), `b` (blue), `y` (yellow), `g` (green), `p` (purple), `w` (white)
+- **View modes**: `2` (2D), `3` (3D)
+- **Shapes**: `c` (circle), `d` (diamond), `s` (square), `t` (triangle), `x` (star), `m` (marker)
+- **Coordinates**: Rounded to 1 decimal place
+- **Default shapes**: Circle shape is omitted to save bytes
+
+<Note>
+This compact format reduces a typical full playthrough from ~50 KB to under 2 KB, making it QR-code compatible.
+</Note>

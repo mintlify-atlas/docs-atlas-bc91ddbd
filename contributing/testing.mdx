@@ -1,0 +1,361 @@
+---
+title: Testing Guide
+description: Testing strategy, tools, and best practices for Tarkov Kappa Navi
+---
+
+Tarkov Kappa Navi uses **Vitest** for fast, modern unit testing. This guide covers our testing approach and how to write effective tests.
+
+## Testing Stack
+
+- **Test Runner**: Vitest 4.x
+- **Framework**: React 18
+- **Language**: TypeScript (strict mode)
+- **Assertion Library**: Vitest's built-in assertions (Chai-compatible)
+
+## Running Tests
+
+### Run All Tests Once
+
+```bash
+npm run test
+```
+
+This runs all tests in the project and exits. Use this for CI/CD pipelines or final validation before commits.
+
+### Run Tests in Watch Mode
+
+```bash
+npm run test:watch
+```
+
+This starts Vitest in watch mode, which:
+- Re-runs tests when files change
+- Shows only affected tests
+- Provides an interactive CLI
+
+<Tip>
+Use watch mode during active development for instant feedback as you write code and tests.
+</Tip>
+
+### Run Specific Tests
+
+You can run specific test files:
+
+```bash
+npm run test unlock.test.ts
+```
+
+Or run tests matching a pattern:
+
+```bash
+npm run test -- --grep "unlock"
+```
+
+## Test Organization
+
+Tests are located in `__tests__` directories within their feature folders:
+
+```
+src/
+├── domain/
+│   ├── __tests__/
+│   │   ├── unlock.test.ts
+│   │   ├── kappaProgress.test.ts
+│   │   ├── recommendations.test.ts
+│   │   ├── prereqTree.test.ts
+│   │   ├── itemTier.test.ts
+│   │   └── hideoutUnlock.test.ts
+│   ├── unlock.ts
+│   ├── kappaProgress.ts
+│   └── ...
+```
+
+### Naming Convention
+
+- Test files: `<feature>.test.ts` or `<feature>.test.tsx`
+- Place tests in `__tests__/` directory adjacent to the code being tested
+- Mirror the source file name: `unlock.ts` → `unlock.test.ts`
+
+## Writing Tests
+
+### Basic Test Structure
+
+Here's the basic structure used in the codebase:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { isTaskUnlocked } from '../unlock';
+import type { QuestModel } from '../../api/types';
+import type { TaskStatus } from '../../db/types';
+
+describe('isTaskUnlocked', () => {
+  it('unlocks a task with no prereqs when level is sufficient', () => {
+    const quest = makeQuest({ minPlayerLevel: 5 });
+    expect(isTaskUnlocked(quest, 5, new Map())).toBe(true);
+  });
+
+  it('locks a task when level is insufficient', () => {
+    const quest = makeQuest({ minPlayerLevel: 10 });
+    expect(isTaskUnlocked(quest, 9, new Map())).toBe(false);
+  });
+});
+```
+
+### Test Helpers
+
+Create helper functions to reduce boilerplate:
+
+```typescript
+function makeQuest(overrides: Partial<QuestModel> = {}): QuestModel {
+  return {
+    id: 'q1',
+    name: 'Test Quest',
+    traderId: 't1',
+    traderName: 'Prapor',
+    mapId: 'm1',
+    mapName: 'Customs',
+    kappaRequired: true,
+    minPlayerLevel: 1,
+    wikiLink: '',
+    imageLink: null,
+    prereqIds: [],
+    objectives: [],
+    ...overrides,
+  };
+}
+```
+
+<Tip>
+Helper functions make tests more readable and maintainable. You only specify the properties that matter for each test case.
+</Tip>
+
+### Example: Testing Domain Logic
+
+From `src/domain/__tests__/unlock.test.ts`:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { isTaskUnlocked, getTaskLockState, partitionByLock } from '../unlock';
+import type { QuestModel } from '../../api/types';
+import type { TaskStatus } from '../../db/types';
+
+function makeQuest(overrides: Partial<QuestModel> = {}): QuestModel {
+  return {
+    id: 'q1',
+    name: 'Test Quest',
+    traderId: 't1',
+    traderName: 'Prapor',
+    mapId: 'm1',
+    mapName: 'Customs',
+    kappaRequired: true,
+    minPlayerLevel: 1,
+    wikiLink: '',
+    imageLink: null,
+    prereqIds: [],
+    objectives: [],
+    ...overrides,
+  };
+}
+
+describe('isTaskUnlocked', () => {
+  it('unlocks a task with no prereqs when level is sufficient', () => {
+    const q = makeQuest({ minPlayerLevel: 5 });
+    expect(isTaskUnlocked(q, 5, new Map())).toBe(true);
+    expect(isTaskUnlocked(q, 10, new Map())).toBe(true);
+  });
+
+  it('locks a task when level is insufficient', () => {
+    const q = makeQuest({ minPlayerLevel: 10 });
+    expect(isTaskUnlocked(q, 9, new Map())).toBe(false);
+  });
+
+  it('unlocks when all prereqs are done', () => {
+    const q = makeQuest({ prereqIds: ['p1', 'p2'] });
+    const pm = new Map<string, TaskStatus>([
+      ['p1', 'done'],
+      ['p2', 'done'],
+    ]);
+    expect(isTaskUnlocked(q, 1, pm)).toBe(true);
+  });
+
+  it('locks when a prereq is in_progress', () => {
+    const q = makeQuest({ prereqIds: ['p1'] });
+    const pm = new Map<string, TaskStatus>([['p1', 'in_progress']]);
+    expect(isTaskUnlocked(q, 1, pm)).toBe(false);
+  });
+});
+```
+
+## What to Test
+
+### Priority 1: Domain Logic
+
+**Always test** pure functions in `src/domain/`:
+
+- Unlock detection (`isTaskUnlocked`, `getTaskLockState`)
+- Kappa progress calculations
+- Recommendation algorithms
+- Filter logic
+- Prerequisite tree building
+- Item tier calculations
+
+These are the core business logic and must be thoroughly tested.
+
+### Priority 2: Utilities
+
+Test utility functions in `src/lib/`:
+
+- Data transformations
+- Validation logic
+- QR code generation/parsing
+- Pin preset handling
+
+### Priority 3: API Layer
+
+Test data normalization and transformation:
+
+- GraphQL response normalization
+- Type conversions
+- Error handling
+
+### Lower Priority: UI Components
+
+For this project, focus on domain logic first. Component tests can be added later for:
+
+- Complex interactive components
+- Components with significant conditional logic
+- Accessibility requirements
+
+## Test Coverage Expectations
+
+<Steps>
+  <Step title="Domain logic: 100% coverage">
+    All functions in `src/domain/` should have comprehensive test coverage. These are pure functions and easy to test.
+  </Step>
+
+  <Step title="Utilities: High coverage">
+    Aim for >80% coverage on utility functions in `src/lib/`.
+  </Step>
+
+  <Step title="Components: As needed">
+    Add tests for complex components with business logic. Simple presentational components may not need tests.
+  </Step>
+</Steps>
+
+<Note>
+Focus on meaningful tests that catch real bugs, not just hitting coverage numbers.
+</Note>
+
+## Testing Best Practices
+
+### Write Descriptive Test Names
+
+Test names should describe the scenario and expected outcome:
+
+```typescript
+// Good
+it('unlocks a task with no prereqs when level is sufficient', () => { ... });
+it('locks when a prereq is in_progress', () => { ... });
+
+// Bad
+it('test1', () => { ... });
+it('works', () => { ... });
+```
+
+### Test Edge Cases
+
+Don't just test the happy path:
+
+```typescript
+describe('partitionByLock', () => {
+  it('handles empty quest list', () => {
+    const { unlocked, locked } = partitionByLock([], 1, new Map());
+    expect(unlocked).toEqual([]);
+    expect(locked).toEqual([]);
+  });
+
+  it('handles missing progress entries', () => {
+    const q = makeQuest({ prereqIds: ['unknown'] });
+    expect(isTaskUnlocked(q, 1, new Map())).toBe(false);
+  });
+});
+```
+
+### Keep Tests Independent
+
+Each test should be able to run independently:
+
+```typescript
+// Good - each test creates its own data
+it('unlocks when all prereqs are done', () => {
+  const q = makeQuest({ prereqIds: ['p1'] });
+  const pm = new Map([['p1', 'done']]);
+  expect(isTaskUnlocked(q, 1, pm)).toBe(true);
+});
+
+it('locks when a prereq is incomplete', () => {
+  const q = makeQuest({ prereqIds: ['p1'] });
+  const pm = new Map([['p1', 'in_progress']]);
+  expect(isTaskUnlocked(q, 1, pm)).toBe(false);
+});
+```
+
+### Use Type Safety
+
+Leverage TypeScript in tests:
+
+```typescript
+import type { QuestModel } from '../../api/types';
+import type { TaskStatus } from '../../db/types';
+
+// TypeScript ensures your test data matches real types
+const pm = new Map<string, TaskStatus>([
+  ['p1', 'done'], // ✓ Valid status
+  // ['p2', 'invalid'], // ✗ TypeScript error
+]);
+```
+
+## Common Patterns
+
+### Testing Functions That Return Objects
+
+```typescript
+it('returns correct lock state object', () => {
+  const { unlocked, locked } = partitionByLock(quests, 5, pm);
+  expect(unlocked.map((q) => q.id)).toEqual(['q1', 'q3']);
+  expect(locked.map((q) => q.id)).toEqual(['q2']);
+});
+```
+
+### Testing Multiple Scenarios
+
+```typescript
+describe('getTaskLockState', () => {
+  it('returns level_locked when level is too low', () => {
+    const q = makeQuest({ minPlayerLevel: 15, prereqIds: ['p1'] });
+    const pm = new Map<string, TaskStatus>([['p1', 'not_started']]);
+    expect(getTaskLockState(q, 10, pm)).toBe('level_locked');
+  });
+
+  it('returns prereq_locked when prereqs are incomplete', () => {
+    const q = makeQuest({ minPlayerLevel: 1, prereqIds: ['p1'] });
+    expect(getTaskLockState(q, 1, new Map())).toBe('prereq_locked');
+  });
+
+  it('returns unlocked when all conditions met', () => {
+    const q = makeQuest({ minPlayerLevel: 1, prereqIds: ['p1'] });
+    const pm = new Map<string, TaskStatus>([['p1', 'done']]);
+    expect(getTaskLockState(q, 1, pm)).toBe('unlocked');
+  });
+});
+```
+
+## Next Steps
+
+- Review existing tests in `src/domain/__tests__/` for more examples
+- Run tests in watch mode while developing: `npm run test:watch`
+- Ensure all tests pass before submitting a PR: `npm run test`
+
+<Tip>
+When adding new features, write tests first (TDD) or immediately after. Don't leave testing for later.
+</Tip>

@@ -1,0 +1,170 @@
+---
+title: Development Setup
+description: Set up your local development environment to contribute to Tarkov Kappa Navi
+---
+
+This guide will help you set up Tarkov Kappa Navi for local development.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** >= 18
+- **npm** >= 9
+- **Git** for version control
+
+<Tip>
+We recommend using [nvm](https://github.com/nvm-sh/nvm) to manage Node.js versions.
+</Tip>
+
+## Getting Started
+
+<Steps>
+  <Step title="Fork the repository">
+    Navigate to the [TarkovKappaNavi repository](https://github.com/marlho/TarkovKappaNavi) and click the "Fork" button in the top right corner to create your own copy.
+  </Step>
+
+  <Step title="Clone your fork">
+    Clone your forked repository to your local machine:
+
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/TarkovKappaNavi.git
+    cd TarkovKappaNavi
+    ```
+
+    Replace `YOUR_USERNAME` with your GitHub username.
+  </Step>
+
+  <Step title="Add upstream remote">
+    Add the original repository as an upstream remote to stay in sync:
+
+    ```bash
+    git remote add upstream https://github.com/marlho/TarkovKappaNavi.git
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all project dependencies using npm:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start the development server">
+    Run the development server:
+
+    ```bash
+    npm run dev
+    ```
+
+    The application will be available at `http://localhost:5173`
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts for development:
+
+<CodeGroup>
+```bash Development server
+npm run dev
+```
+
+```bash Build for production
+npm run build
+```
+
+```bash Preview production build
+npm run preview
+```
+
+```bash Run linter
+npm run lint
+```
+
+```bash Run tests
+npm run test
+```
+
+```bash Run tests in watch mode
+npm run test:watch
+```
+</CodeGroup>
+
+### Script Details
+
+- `npm run dev` - Starts Vite development server with hot module replacement
+- `npm run build` - Runs TypeScript type checking (`tsc -b`) followed by production build
+- `npm run preview` - Preview the production build locally
+- `npm run lint` - Run ESLint to check code quality
+- `npm run test` - Run all tests once using Vitest
+- `npm run test:watch` - Run tests in watch mode for active development
+
+<Note>
+The build command includes TypeScript type checking, so you'll see type errors during the build process if any exist.
+</Note>
+
+## Project Structure
+
+Understanding the project structure will help you navigate the codebase:
+
+```
+src/
+├── api/           # GraphQL API communication, normalization, React Query hooks
+├── components/    # UI components organized by feature
+│   ├── dashboard/ # Dashboard screen components
+│   ├── detail/    # Task detail panel components
+│   ├── hideout/   # Hideout screen components
+│   ├── items/     # Item screen components
+│   ├── layout/    # AppShell, Header, Sidebar components
+│   ├── map/       # Map screen components
+│   ├── settings/  # Settings screen components
+│   ├── share/     # QR code sharing components
+│   ├── tasks/     # Task list screen components
+│   └── ui/        # Reusable UI components
+├── data/          # Static data files
+├── db/            # Dexie database definitions and CRUD operations
+├── domain/        # Domain logic (unlock checks, Kappa progress, filters, etc.)
+├── hooks/         # Custom React hooks
+├── i18n/          # Internationalization (Japanese/English)
+├── lib/           # Utilities (QR sharing, pin presets, etc.)
+└── stores/        # Zustand state stores
+```
+
+### Architecture Overview
+
+Tarkov Kappa Navi uses a client-side architecture:
+
+- **API Data**: Fetched from tarkov.dev GraphQL API, cached in memory with TanStack Query (12h TTL)
+- **User Data**: Persisted in IndexedDB using Dexie (profile, progress, notes, pins, etc.)
+- **UI State**: Managed with Zustand stores
+- **Domain Logic**: Pure functions for unlock detection, filtering, and recommendations
+
+## Technology Stack
+
+| Category | Technology |
+|----------|------------|
+| Framework | React 18 + TypeScript |
+| Build Tool | Vite 5 |
+| State Management | Zustand v5 |
+| Server State | TanStack Query v5 |
+| Local Database | Dexie v4 (IndexedDB) |
+| Validation | Zod v4 |
+| Routing | React Router v7 |
+| Styling | CSS Modules |
+| Testing | Vitest |
+| Linting | ESLint |
+| Icons | Lucide React |
+
+## Next Steps
+
+Now that your environment is set up:
+
+1. Read the [Contributing Guidelines](/contributing/guidelines) to understand our coding standards
+2. Learn about our [Testing Strategy](/contributing/testing)
+3. Check the [GitHub Issues](https://github.com/marlho/TarkovKappaNavi/issues) for tasks to work on
+
+<Note>
+This project is fully client-side with no backend required. All user data is stored locally in the browser's IndexedDB.
+</Note>

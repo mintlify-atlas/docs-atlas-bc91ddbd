@@ -1,0 +1,277 @@
+---
+title: Recommendations
+description: Learn how the quest recommendation algorithm works and how to use it to prioritize tasks efficiently
+---
+
+## Overview
+
+Tarkov Kappa Navi's recommendation system analyzes your current progress and suggests **up to 5 high-priority tasks** to tackle next, using a composite score based on three factors:
+
+1. **Downstream impact** (50% weight) — Tasks that unlock many other Kappa-required tasks
+2. **Map batching** (30% weight) — Tasks on the same map as other available tasks
+3. **Kappa required** (20% weight) — Tasks required for the Kappa container
+
+<Note>
+Recommendations are recalculated dynamically based on your current level, unlocked tasks, and progress status.
+</Note>
+
+## How the algorithm works
+
+### Step 1: Filter eligible tasks
+
+The algorithm starts by filtering for tasks that are:
+- **Unlocked** based on your current player level and prerequisite completion
+- **Not completed** (status is "not started" or "in progress")
+
+<Tip>
+If no tasks meet these criteria, the recommendation list will be empty.
+</Tip>
+
+### Step 2: Build reverse dependency graph
+
+The system reverses the prerequisite graph to determine which tasks are **unlocked by** completing a given task.
+
+Example:
+- Task A requires Task B (B → A)
+- Reverse graph: Completing B unlocks A (B → [A])
+
+This allows the algorithm to count how many tasks each candidate unlocks downstream.
+
+### Step 3: Calculate downstream impact
+
+For each candidate task, the algorithm uses **breadth-first search (BFS)** to count how many Kappa-required tasks it unlocks (directly or transitively).
+
+```typescript
+function countDownstreamTasks(
+  taskId: string,
+  reverseDeps: Map<string, string[]>,
+  progressMap: Map<string, TaskStatus>,
+  kappaTaskIds: Set<string>,
+): number {
+  // BFS traversal with cycle guard
+  // Only counts tasks that:
+  // - Are not already done
+  // - Are Kappa-required
+}
+```
+
+<Note>
+Tasks that are already marked "done" are excluded from the downstream count.
+</Note>
+
+### Step 4: Calculate map batching score
+
+The algorithm identifies **how many other unlocked tasks** share the same map as the candidate task.
+
+Example:
+- Task X is on Customs
+- 3 other unlocked tasks are also on Customs
+- Task X gets a map batch count of **3**
+
+Map IDs are extracted from:
+- `quest.mapId` (primary map)
+- `quest.objectives[].mapIds` (objective-specific maps)
+
+<Tip>
+Tasks with multiple maps use the **highest** batch count across all associated maps.
+</Tip>
+
+### Step 5: Normalize and weight scores
+
+Raw scores are normalized to a 0-1 range, then combined with fixed weights:
+
+```typescript
+const maxDownstream = Math.max(...recs.map(r => r.downstreamCount), 1);
+const maxMapBatch = Math.max(...recs.map(r => r.mapBatchCount), 1);
+
+for (const rec of recs) {
+  const downstreamNorm = rec.downstreamCount / maxDownstream;
+  const mapBatchNorm = rec.mapBatchCount / maxMapBatch;
+  const kappaNorm = rec.isKappaRequired ? 1 : 0;
+
+  rec.compositeScore =
+    downstreamNorm * 0.5 +  // 50% weight
+    mapBatchNorm * 0.3 +     // 30% weight
+    kappaNorm * 0.2;         // 20% weight
+}
+```
+
+### Step 6: Sort and select top 5
+
+Tasks are sorted by composite score in descending order, and the **top 5** are returned as recommendations.
+
+## Scoring factors explained
+
+### Downstream impact (50% weight)
+
+Prioritizes tasks that **unblock the most Kappa-required tasks**.
+
+- High downstream count = completing this task opens many paths
+- Low downstream count = completing this task has limited impact
+
+**Example:**
+- "Introduction" unlocks 10 other Kappa tasks → High score
+- "Vitamins - Part 1" unlocks only 1 task → Low score
+
+<Tip>
+Early-game quests often have high downstream impact because they unlock entire quest chains.
+</Tip>
+
+### Map batching (30% weight)
+
+Prioritizes tasks on **maps with many other available tasks**, encouraging efficient raid planning.
+
+- If 4 tasks are available on Customs, Customs tasks get higher scores
+- If only 1 task is available on Reserve, Reserve tasks get lower scores
+
+**Example:**
+- Task A (Customs) — 3 other tasks on Customs → Batch count = 3
+- Task B (Labs) — 0 other tasks on Labs → Batch count = 0
+
+Task A scores higher due to map synergy.
+
+<Note>
+Only tasks that are **currently unlocked and not completed** count toward map batching. Locked tasks are excluded.
+</Note>
+
+### Kappa required (20% weight)
+
+Boosts tasks that are **required for the Kappa container**.
+
+- Kappa-required: +20% to composite score
+- Not Kappa-required: +0%
+
+<Tip>
+This factor ensures Kappa-required tasks are always prioritized over optional side quests, even if side quests have good map batching.
+</Tip>
+
+## Understanding recommendation reasons
+
+Each recommended task displays human-readable reasons explaining its score:
+
+### "Unlocks X Kappa tasks"
+
+- Displayed when `downstreamCount > 0`
+- Example: "Unlocks 5 Kappa tasks"
+- Indicates high downstream impact
+
+### "X tasks on [Map Name]"
+
+- Displayed when `mapBatchCount > 0`
+- Example: "3 tasks on Customs"
+- Indicates good map synergy
+
+### "Required for Kappa"
+
+- Displayed when `isKappaRequired === true`
+- Indicates this task is mandatory for the Kappa container
+
+<Note>
+Reasons are generated using the current UI language (Japanese or English) from the i18n dictionary.
+</Note>
+
+## Map batch grouping
+
+In addition to top 5 recommendations, the system displays **map batch groups**.
+
+### How map batches work
+
+Map batches group tasks by map when **2 or more tasks** share the same location:
+
+<Steps>
+  <Step title="Group by map">
+    All unlocked, incomplete tasks are grouped by their associated map IDs.
+  </Step>
+  
+  <Step title="Filter groups">
+    Only maps with **2+ tasks** are displayed.
+  </Step>
+  
+  <Step title="Sort by count">
+    Map groups are sorted by task count (highest first).
+  </Step>
+  
+  <Step title="Sort tasks within group">
+    Tasks within each map group are sorted by composite score.
+  </Step>
+</Steps>
+
+**Example output:**
+- **Customs** (5 tasks)
+  - Task A (score: 0.85)
+  - Task B (score: 0.72)
+  - Task C (score: 0.68)
+  - Task D (score: 0.55)
+  - Task E (score: 0.43)
+- **Lighthouse** (3 tasks)
+  - Task F (score: 0.78)
+  - Task G (score: 0.61)
+  - Task H (score: 0.54)
+
+<Tip>
+Use map batches to plan efficient raids: complete multiple tasks in one run by focusing on maps with the most available tasks.
+</Tip>
+
+## How to use recommendations effectively
+
+### Daily routine
+
+<Steps>
+  <Step title="Check recommendations">
+    Start your session by reviewing the top 5 recommended tasks.
+  </Step>
+  
+  <Step title="Review map batches">
+    Identify which map has the most tasks available.
+  </Step>
+  
+  <Step title="Plan your raid">
+    Choose a map with multiple tasks and attempt to complete 2-3 in one run.
+  </Step>
+  
+  <Step title="Update progress">
+    Mark tasks as "in progress" or "done" as you complete them.
+  </Step>
+</Steps>
+
+### Prioritization tips
+
+- **High downstream tasks first**: Focus on tasks that unlock many others (e.g., early trader quests)
+- **Batch maps**: Prioritize maps with 3+ tasks to maximize efficiency
+- **Kappa path**: If you're targeting Kappa, stick to Kappa-required tasks
+- **Pin top tasks**: Add top recommendations to your "Now" panel for quick access
+
+<Tip>
+Recommendations update automatically when you change your player level or mark tasks as complete.
+</Tip>
+
+### When to ignore recommendations
+
+Recommendations are optimized for Kappa progression, but you may want to deviate if:
+
+- You're working on a specific trader reputation goal
+- You need items unlocked by non-Kappa quests
+- You're helping friends with their quests
+- You want to avoid difficult maps or PvP-heavy areas
+
+<Note>
+The recommendation system is a **guide**, not a strict rule. Play the game in the way that's most fun for you.
+</Note>
+
+## Technical notes
+
+### Performance considerations
+
+- **BFS complexity**: O(V + E) where V = tasks, E = prerequisite edges
+- **Cycle detection**: Visited set prevents infinite loops in circular dependencies
+- **Recalculation**: Recommendations are recalculated on every render when progress or level changes
+
+### Edge cases
+
+- **No unlocked tasks**: Returns empty arrays for `topTasks` and `mapBatches`
+- **All tasks complete**: Returns empty recommendations
+- **Ties in composite score**: Maintains original quest order (stable sort)
+
+<Tip>
+If you want to understand the exact scoring logic, check `src/domain/recommendations.ts` in the source code.
+</Tip>

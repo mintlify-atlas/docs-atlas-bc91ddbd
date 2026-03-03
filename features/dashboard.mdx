@@ -1,0 +1,165 @@
+---
+title: Dashboard
+description: Your central hub for tracking Kappa progress, active tasks, and smart recommendations
+---
+
+The Dashboard is your command center for tracking your journey to the Kappa container. It provides a comprehensive overview of your progress, active tasks, and intelligent recommendations to help you plan your next steps efficiently.
+
+## Kappa progress bar
+
+The top of the dashboard displays your overall Kappa progress with a visual progress bar showing how many Kappa-required tasks you've completed.
+
+<Note>
+The progress calculation only counts quests that are explicitly required for the Kappa container.
+</Note>
+
+Below the main progress bar, you'll see a breakdown by trader showing:
+- Progress bar for each trader
+- Completed vs. total Kappa tasks for that trader (e.g., "5/12")
+- Completion percentage
+
+This per-trader view helps you identify which traders need more attention and balance your quest progression across all vendors.
+
+## Now panel
+
+The "Now" panel is your active task workspace where you can pin up to 10 tasks you're currently working on.
+
+### Pinning tasks
+
+To add tasks to the Now panel:
+
+<Steps>
+  <Step title="Navigate to the Tasks page">
+    Find the quest you want to work on using filters or search.
+  </Step>
+  <Step title="Open task details">
+    Click on a task to open the detail panel.
+  </Step>
+  <Step title="Pin the task">
+    Click the pin button to add it to your Now panel.
+  </Step>
+</Steps>
+
+### Task cards
+
+Each pinned task displays:
+- **Task name** - Click to view full details
+- **Trader name** - Who assigned the quest
+- **Status badge** - "WIP" for in-progress tasks, or "Not Started"
+- **Objectives preview** - Up to 3 objectives with a count if more exist
+- **Quick actions** - Mark as done or remove from panel
+
+<Tip>
+The Now panel shows a counter (e.g., "3/10") indicating how many tasks you've pinned out of the maximum 10 slots.
+</Tip>
+
+### Marking tasks complete
+
+When you click the "Done" button on a task:
+
+1. The app checks if all prerequisite tasks are completed
+2. If prerequisites are incomplete, a confirmation modal appears listing them
+3. You can batch-complete all prerequisites at once or cancel
+4. Completed tasks are automatically removed from the Now panel
+
+## Recommended tasks
+
+The Recommended Tasks section uses a scoring algorithm to suggest which quests to tackle next. You can view recommendations in two ways:
+
+### Priority view
+
+Shows the top 5 recommended tasks ranked by a composite score. Each recommendation displays:
+- Task name and trader
+- "K" badge for Kappa-required tasks
+- Reason tags explaining why it's recommended
+
+### By map view
+
+Groups recommended tasks by location, showing:
+- Map name and task count for that location
+- All recommended tasks available on that map
+- Ideal for planning efficient map runs
+
+### Scoring algorithm
+
+The recommendation score is calculated using three weighted factors:
+
+**Downstream impact (50% weight)**
+- Counts how many Kappa-required tasks depend on completing this quest
+- Higher impact tasks unlock more of the quest chain
+- Example reason: "Unlocks 3 Kappa tasks"
+
+**Map batch efficiency (30% weight)**
+- Identifies tasks that share locations with other available quests
+- Helps you complete multiple objectives in a single raid
+- Example reason: "Customs: 4 tasks available"
+
+**Kappa requirement (20% weight)**
+- Prioritizes tasks that are mandatory for the Kappa container
+- Example reason: "Required for Kappa"
+
+<Note>
+The algorithm only considers unlocked, incomplete tasks based on your current level and quest progress.
+</Note>
+
+## Next unlock preview
+
+The Next Unlock Preview section (visible below recommendations) shows upcoming tasks that will become available when you:
+- Level up your character
+- Complete specific prerequisite quests
+- Reach required trader loyalty levels
+
+This helps you plan ahead and understand what's coming next in your progression.
+
+## User workflows
+
+### Daily planning workflow
+
+<Steps>
+  <Step title="Check your Kappa progress">
+    Review the progress bars to see which traders need attention.
+  </Step>
+  <Step title="Review pinned tasks">
+    Check your Now panel for active objectives.
+  </Step>
+  <Step title="Add new tasks from recommendations">
+    Browse Priority or Map views to find efficient next steps.
+  </Step>
+  <Step title="Organize by map">
+    Use the Map view to batch tasks for your next raid location.
+  </Step>
+</Steps>
+
+### Efficient raid planning
+
+<Steps>
+  <Step title="Switch to Map view in recommendations">
+    See all available tasks grouped by location.
+  </Step>
+  <Step title="Select a map with multiple tasks">
+    Choose locations with the highest task count.
+  </Step>
+  <Step title="Pin all tasks for that map">
+    Add them to your Now panel for easy reference.
+  </Step>
+  <Step title="Use the Map Tools page">
+    Place pins for objectives and plan your route.
+  </Step>
+</Steps>
+
+### Tracking completion
+
+<Steps>
+  <Step title="Complete objectives in-game">
+    Finish the task requirements in Tarkov.
+  </Step>
+  <Step title="Mark tasks as done">
+    Click the Done button on completed tasks in the Now panel.
+  </Step>
+  <Step title="Handle prerequisites automatically">
+    The app will offer to batch-complete any incomplete prerequisites.
+  </Step>
+  <Step title="Watch your progress update">
+    The Kappa progress bar updates immediately.
+  </Step>
+</Steps>

@@ -1,80 +1,170 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Start tracking your Escape from Tarkov quest progress in minutes
 ---
 
-## Get started in three steps
+# Quickstart
 
-Get your documentation site running locally and make your first customization.
+Get started with Tarkov Kappa Navi and begin tracking your journey to the Kappa container. This guide will help you set up the application and track your first quest.
 
-### Step 1: Set up your local environment
+## Running the application
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Tarkov Kappa Navi is a client-side web application that runs entirely in your browser. You can either access a hosted version (if available) or run it locally on your machine.
+
+<Note>
+  Since this is a local-first application, all your progress data is stored in your browser's IndexedDB. Your data never leaves your device unless you explicitly export or share it.
+</Note>
+
+### Run locally
+
+If you want to run the application on your local machine:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/marlho/TarkovKappaNavi.git
+    cd TarkovKappaNavi
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Start the development server">
+    <CodeGroup>
+      ```bash npm
+      npm run dev
+      ```
+
+      ```bash yarn
+      yarn dev
+      ```
+
+      ```bash pnpm
+      pnpm dev
+      ```
+    </CodeGroup>
+
+    The application will start at `http://localhost:5173`
+  </Step>
+</Steps>
+
+## First time setup
+
+Once you have the application running, follow these steps to start tracking your progress:
+
+<Steps>
+  <Step title="Set your player level">
+    Navigate to **Settings** from the sidebar and set your current player level. This is important because:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    - Tasks are locked until you reach the required level
+    - The app will only show you tasks that are currently available
+    - Unlock calculations depend on your player level
+
+    <Note>
+      Update your player level in Settings whenever you level up to ensure accurate task availability.
+    </Note>
+  </Step>
+
+  <Step title="Start tracking your first quest">
+    Go to the **Tasks** section to see all available quests:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    1. Use filters to find tasks by trader, map, or task type
+    2. Click on any task to open the detail panel
+    3. Review task objectives, required items, and rewards
+    4. Mark tasks as complete when you finish them in-game
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    The task detail panel shows:
+    - Prerequisite tasks that must be completed first
+    - Task objectives and acceptance/completion requirements
+    - Personal notes section for strategy planning
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Pin active tasks to your dashboard">
+    While viewing a task in the detail panel, pin it to your "Now" panel:
+    
+    1. Click the pin icon on any task you're actively working on
+    2. Return to **Dashboard** to see your pinned tasks
+    3. Track up to 10 active tasks simultaneously
+    
+    Your Now panel provides quick access to tasks you're currently focusing on without navigating through filters.
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="View your Kappa progress">
+    The **Dashboard** displays your overall progress:
+    
+    - **Kappa progress bar**: Shows completion percentage for Kappa-required tasks
+    - **Per-trader progress**: Track progress with individual traders
+    - **Recommended tasks**: Get smart suggestions based on downstream impact and map efficiency
+    - **Upcoming unlocks**: See which tasks will become available soon
+    
+    Check your dashboard regularly to monitor progress and plan your next steps.
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+### Explore other features
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Map tools" icon="map">
+    Use interactive maps to plan routes and mark key locations with custom pins
+  </Card>
+  
+  <Card title="Hideout planning" icon="house">
+    Track hideout station upgrades and manage item requirements
+  </Card>
+  
+  <Card title="Share progress" icon="qrcode">
+    Export your progress as JSON or share via QR code with friends
+  </Card>
+  
+  <Card title="Item database" icon="box">
+    Browse items with price tier categorization
+  </Card>
 </CardGroup>
 
+### Understanding task recommendations
+
+The Dashboard's recommended tasks are scored based on:
+
+- **Downstream impact**: Tasks that unlock many other tasks get higher priority
+- **Map batching**: Tasks on the same map as other available tasks are grouped together for efficiency
+- **Kappa requirements**: Tasks required for the Kappa container are prioritized
+
+Use these recommendations to optimize your quest completion order and minimize map switching.
+
+### Data backup and sharing
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Your progress is stored locally in IndexedDB. Consider exporting your data regularly as a backup.
 </Note>
+
+In **Settings**, you can:
+
+- **Export to JSON**: Download your complete progress data
+- **Import from JSON**: Restore previously exported data
+- **Generate QR code**: Share your progress with teammates
+- **Import from QR**: Load progress shared by others (includes integrity validation)
+
+### Wipe resets
+
+When Escape from Tarkov has a game wipe:
+
+1. Go to **Settings**
+2. Use the **Wipe Reset** function to clear all progress
+3. Keep your player level or reset it to 1
+4. Start tracking from a fresh state
