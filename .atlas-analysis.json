@@ -1,0 +1,97 @@
+{
+  "projectType": "saas",
+  "projectName": "Tarkov Kappa Navi",
+  "projectDescription": "A quest progress tracker for Escape from Tarkov helping players achieve the Kappa container",
+  "theme": "almond",
+  "primaryColor": "#D4AF37",
+  "lightColor": "#E8C547",
+  "darkColor": "#B8941F",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/quest-tracking",
+              "features/map-tools",
+              "features/hideout-management",
+              "features/item-tracking"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/data-management",
+              "guides/sharing-progress",
+              "guides/customization",
+              "guides/recommendations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/architecture",
+              "development/data-flow",
+              "development/tech-stack"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "pages": [
+              "api/database-schema",
+              "api/stores",
+              "api/domain-logic",
+              "api/graphql-queries"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "contributing/setup",
+              "contributing/guidelines",
+              "contributing/testing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Quest progress tracking with Kappa container visualization",
+    "Smart task recommendations based on downstream impact and map batching",
+    "Interactive map tools with custom pins and shareable presets",
+    "Hideout station management with item inventory tracking",
+    "Item price tiers and usage tracking across tasks and crafts",
+    "Local-first architecture with IndexedDB persistence",
+    "QR code-based progress sharing and import/export",
+    "Multi-language support (Japanese and English)"
+  ],
+  "publicApiSurface": [
+    "Dashboard (Kappa progress, active tasks, recommendations)",
+    "Tasks page (quest list, flow view, filtering by trader/map/status)",
+    "Map page (2D/3D maps, custom pins, preset management)",
+    "Hideout page (station grid, item requirements, craft list)",
+    "Items page (price tiers, task usage, barter/craft info)",
+    "Settings (player level, data export/import, QR sharing, wipe reset)",
+    "Database operations (profile, progress, notes, pins, hideout inventory)",
+    "Domain logic (unlock calculations, Kappa progress, task recommendations)",
+    "Zustand stores (filter state, profile state, tier settings, now pins)",
+    "GraphQL API integration (tasks, maps, traders, hideout, items)"
+  ]
+}
